@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "MoneyComes",
+    "slug": "moneycomes",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "moneycomes",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.moneycomes.app"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

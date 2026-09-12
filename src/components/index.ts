@@ -1,0 +1,4 @@
+/**
+ * Shared UI components.
+ */
+export {};

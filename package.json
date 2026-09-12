@@ -1,0 +1,59 @@
+{
+  "name": "moneycomes",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "start": "expo start",
+    "android": "expo run:android",
+    "prebuild:clean": "expo prebuild --platform android --clean",
+    "build:android:debug": "cd android && gradlew assembleDebug",
+    "server:dev": "tsx watch server/index.ts",
+    "server:start": "tsx server/index.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.1",
+    "better-auth": "^1.7.4",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
+    "expo": "~56.0.21",
+    "expo-constants": "~56.0.25",
+    "expo-linking": "~56.0.17",
+    "expo-router": "~56.2.20",
+    "expo-splash-screen": "~56.0.15",
+    "expo-status-bar": "~56.0.4",
+    "hono": "^4.13.7",
+    "pg": "^8.23.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.85.3",
+    "react-native-reanimated": "4.3.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "react-native-worklets": "0.8.3",
+    "zod": "^4.6.2"
+  },
+  "overrides": {
+    "react-native-worklets": "0.8.3",
+    "react-native-reanimated": "4.3.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "@types/node": "^22.14.0",
+    "@types/pg": "^8.23.1",
+    "@types/react": "~19.2.2",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9.20.0",
+    "tsx": "^4.23.13",
+    "typescript": "~5.8.2",
+    "typescript-eslint": "^8.24.0",
+    "vitest": "^3.0.5"
+  },
+  "private": true
+}
