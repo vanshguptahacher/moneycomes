@@ -245,18 +245,32 @@ Implement
 
 ## 2.2 Equal split
 
-- [ ] Base allocation.
-- [ ] Remainder calculation.
-- [ ] Deterministic remainder distribution.
-- [ ] Participant validation.
+- [x] Base allocation. (`Math.floor(totalMinor / n)` — integer-only, no floating-point)
+- [x] Remainder calculation. (`totalMinor % n` — always 0 ≤ remainder < n)
+- [x] Deterministic remainder distribution. (first `remainder` participants receive base + 1)
+- [x] Participant validation. (non-empty, non-duplicate, non-blank-string IDs)
+- [x] Domain errors. (`EmptyParticipantsError`, `DuplicateParticipantError`, `InvalidParticipantError`, `NegativeSplitTotalError`)
+- [x] Result structure. (`EqualSplitResult` with total, participantCount, ordered allocations)
 
 ### Tests
-- [ ] 100 / 2.
-- [ ] 100 / 3.
-- [ ] 1 / 3.
-- [ ] Many participants.
-- [ ] Invalid participant list.
-- [ ] Total reconciliation.
+- [x] 100 / 2. (50, 50)
+- [x] 100 / 3. (34, 33, 33)
+- [x] 1 / 3. (1, 0, 0)
+- [x] 0 / 2. (0, 0)
+- [x] 999 / 3. (333, 333, 333)
+- [x] 100 / 4. (25, 25, 25, 25)
+- [x] 101 / 4. (26, 25, 25, 25)
+- [x] Many participants. (100 participants, zero total)
+- [x] Invalid participant list. (empty, duplicate, blank-string)
+- [x] Total reconciliation. (all cases sum to exact total)
+- [x] Negative total rejected.
+- [x] Currency preserved on all allocations.
+- [x] Determinism (same inputs = same output; participant order determines remainder).
+- [x] No allocation outside [base, base+1].
+- [x] JPY (0 minor units) splits.
+
+### Gate
+- [x] Equal split domain operational. (45 split tests, 238 total tests, typecheck PASS, lint PASS)
 
 ## 2.3 Exact split
 

@@ -59,3 +59,19 @@ export {
   // Formatting (presentation only)
   format,
 } from "./money/money.js";
+
+// Equal Split
+export {
+  // Errors
+  EmptyParticipantsError,
+  DuplicateParticipantError,
+  InvalidParticipantError,
+  NegativeSplitTotalError,
+
+  // Types
+  type SplitAllocation,
+  type EqualSplitResult,
+
+  // Operation
+  splitEqually,
+} from "./money/split-equal.js";
