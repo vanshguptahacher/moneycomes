@@ -1,762 +1,655 @@
-# PriceRadar — UI/UX & Design Direction Specification
+# UI_UX_SPEC.md — Expense-Sharing App
 
 ## 1. Purpose
 
-This document defines the visual and interaction direction for PriceRadar.
+This is the authoritative UI/UX specification for the Android-first Expense-Sharing App.
 
-The UI must feel:
+The product is a mobile-first expense-sharing application for students, friends, flatmates, families, and travel groups.
 
-- Modern
-- Premium
-- Simple
-- Clean
-- Easy to understand
-- Calm and trustworthy
-- Data-focused without feeling dense
-- Smooth and responsive
-- Polished enough for a hackathon-winning SaaS product
+The UI must feel modern, premium, minimal, clean, trustworthy, financially clear, fast, familiar, and easy to use with one hand.
 
-The goal is **not** to copy the reference designs. Use them only as visual inspiration for hierarchy, spacing, composition, clarity, component quality, and interaction patterns.
+The primary UX questions are:
 
----
+1. Who owes whom?
+2. How much?
+3. What should I do next?
 
-# 2. Reference Designs
+Financial correctness always has priority over visual effects.
 
-Use these references as inspiration:
+This replaces the incorrect PriceRadar UI specification. PriceRadar concepts such as course dashboards, scraper health, urgency signals, self-healing panels, and desktop-first SaaS sidebars do not belong in this project.
 
-1. Crypto Wallet Dashboard UI Template — Dribbble
-   https://dribbble.com/shots/25281063-Crypto-Wallet-Dashboard-UI-Template
+## 2. Design Strategy
 
-2. Dashboard for an Education Platform — Lingoro
-   https://dribbble.com/shots/27660876-Dashboard-for-an-Education-Platform-Lingoro
+Use two stages:
 
-3. Medical Website / Patient Portal — Dribbble
-   https://dribbble.com/shots/27594036-Medical-Website-Design-Patient-Portal
+STAGE 1 — Functional + Familiar
+STAGE 2 — Professional + Distinctive
 
-The first reference demonstrates a polished dashboard-oriented composition and dark-interface aesthetic. The second provides inspiration for education/product dashboard organization and restrained visual hierarchy. The third demonstrates a clean, calm portal with strong information clarity and subtle accent colors.
+Stage 1 prioritizes correct functionality, financial clarity, predictable navigation, fast expense entry, clear forms, reliable loading/empty/error states, synchronization, and testing.
 
-Do not copy:
-- logos
-- branding
-- exact illustrations
-- proprietary graphics
-- exact text
-- exact layout dimensions
-- exact color palette
-- distinctive branded components
+Stage 2 progressively improves visual identity, typography, spacing, motion, micro-interactions, component polish, and brand identity.
 
-Take inspiration from the design principles, not the artwork.
+Do not perform a large visual redesign before the underlying workflow is stable.
 
----
+## 3. Target Users
 
-# 3. Overall Visual Direction
+### Students
+Hostel/flat expenses, food, college trips, cabs, events, shared purchases.
 
-## Keywords
+### Friends
+Dinners, movies, travel, weekend trips, shopping, shared purchases.
 
-```text
-Premium
-Minimal
-Modern
-Trustworthy
-Analytical
-Elegant
-Calm
-Fast
-Precise
-Professional
-```
+### Flatmates
+Rent, electricity, groceries, internet, household expenses, maintenance.
 
-PriceRadar should look more like a high-quality modern SaaS/data product than a generic admin template.
+### Travel Groups
+Hotels, transport, food, tickets, activities, miscellaneous expenses.
 
-Avoid the feeling of:
-- generic Bootstrap dashboard
-- overly colorful analytics template
-- excessive glassmorphism
-- excessive gradients
-- huge cards
-- excessive rounded corners
-- visual clutter
+## 4. Core UX Principles
 
----
+### Financial clarity
+Prefer:
+- You get ₹500
+- You pay ₹300
+- Rahul owes you ₹500
+- You owe Rahul ₹300
+- All settled
+- Settle up
 
-# 4. Layout Philosophy
+Avoid confusing accounting terminology such as net receivable, liability position, or unexplained positive/negative values.
 
-Use a strong desktop-first dashboard layout:
+### Familiarity
+Users should immediately understand where groups, friends, expenses, balances, settlements, activity, and settings are located.
 
-```text
-┌──────────────┬───────────────────────────────────────────┐
-│              │ Header                                    │
-│   Sidebar    ├───────────────────────────────────────────┤
-│              │                                           │
-│              │ Main Dashboard                            │
-│              │                                           │
-│              │ KPI / Overview                            │
-│              │                                           │
-│              │ Course Intelligence                      │
-│              │                                           │
-│              │ Self-Healing / Activity                  │
-│              │                                           │
-└──────────────┴───────────────────────────────────────────┘
-```
+### One primary action
+Every major screen should have one obvious primary action.
 
-The sidebar should be compact and elegant.
+### Progressive disclosure
+Keep the common path short and expose advanced options only when relevant.
 
-The main content should have generous whitespace while still fitting meaningful information above the fold.
+### Finance first
+Prioritize readable numbers, correct currency, contrast, clear status, and large touch targets over decorative effects.
 
----
+## 5. Mobile-First Layout
 
-# 5. Navigation
+Android is the primary platform.
 
-Suggested navigation:
+Design for:
+- one-handed use
+- thumb-friendly controls
+- 44–48dp-class touch targets where practical
+- Android back behavior
+- keyboard-aware forms
+- safe areas
+- small and large Android screens
 
-```text
-PriceRadar
+Do not simply shrink a desktop UI for mobile.
 
-Overview
-Courses
-Price Changes
-Urgency Signals
-Self-Healing
+## 6. Primary Navigation
 
-────────────
+Preferred Phase 1 navigation:
 
-Scrapers
-Activity
+Home | Groups | + | Activity | Account
 
-────────────
+The central + is the primary creation action and opens Add Expense.
 
-Settings
-```
+Friends remain accessible through Home, Groups, search, and person/balance flows. A dedicated Friends destination may be introduced only if genuinely useful.
 
-Use simple, recognizable icons.
+Navigation must be consistent and must never create dead ends.
 
-Do not overload navigation with unnecessary pages.
+## 7. Authentication
 
-Sidebar behavior:
+### Session bootstrap
+Show an appropriate loading state while determining session status.
 
-- expandable/collapsible
-- smooth width transition
-- active item clearly visible
-- subtle hover state
-- tooltip when collapsed
+### Welcome
+Keep it minimal:
+- app identity
+- short value proposition
+- Create account
+- Sign in
 
----
+Suggested message:
+Split expenses. Stay clear. Settle easily.
 
-# 6. Header
+### Sign up
+Name, email, password, validation, loading, errors, and successful session transition.
 
-Header should contain:
+### Sign in
+Email, password, validation, loading, errors, password recovery entry.
 
-- current page title
-- short contextual description where useful
-- global search if genuinely useful
-- last sync indicator
-- notification/alert indicator
-- optional profile/settings area
+### Password recovery
+Use the selected authentication system's secure recovery flow.
 
-Keep the header quiet and uncluttered.
+### Profile setup
+Collect only useful information such as display name, avatar, and default currency.
+
+## 8. Home / Dashboard
+
+The Dashboard is the primary home experience.
+
+It should answer:
+- What do I get?
+- What do I pay?
+- What is my net position?
+- Who needs my attention?
+- Which groups matter?
+- What happened recently?
+- What should I do next?
+
+### Header
+Compact greeting, display name, avatar, notification entry.
+
+### Financial summary
+Show:
+- You get
+- You pay
+- Net
 
 Example:
-
-```text
-Price Intelligence                         Last synced 2m ago
-Monitor course pricing and recurring offers
-```
-
----
-
-# 7. Dashboard Overview
-
-The primary dashboard should immediately answer:
-
-1. What is happening with prices?
-2. Which courses changed?
-3. Which offers look persistent?
-4. Is the scraper system healthy?
-
-Suggested top-level metrics:
-
-```text
-Tracked Courses
-Price Changes
-Potential Persistent Offers
-Scraper Health
-```
-
-Cards should be compact and informative.
-
-Do not create giant dashboard cards.
-
----
-
-# 8. KPI Cards
-
-Each KPI card should contain:
-
-- small label
-- primary number
-- short comparison/status
-- subtle icon
-- optional micro trend indicator
-
-Example:
-
-```text
-TRACKED COURSES
-
-24
-
-+3 this week
-```
-
-Use visual emphasis carefully.
-
-The number should dominate; supporting information should remain secondary.
-
----
-
-# 9. Course Intelligence Table
-
-This is one of the most important screens.
-
-The table should feel premium and highly readable.
-
-Suggested columns:
-
-```text
-Course
-Platform
-Current Price
-Original Price
-Discount
-Urgency
-Price Change
-Last Scraped
-Status
-```
-
-Example conceptual row:
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ Full Stack Development                                      │
-│ Coding Ninjas       ₹49,999   ₹99,999   50%   ⚠ Recurring  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-Important:
-
-- platform should have a subtle visual identity
-- prices should use strong typography
-- discount should be easy to scan
-- status should use compact badges
-- rows should have subtle hover interactions
-- avoid excessive borders
-
-Use whitespace and typography to create separation.
-
----
-
-# 10. Price Change Visualization
-
-Price changes should be immediately understandable.
-
-Example:
-
-```text
-₹9,999
-  ↓
-₹7,999
-
--20%
-```
-
-Use a compact visual indicator rather than a large chart unless historical data actually exists.
-
-Never fabricate historical information.
-
----
-
-# 11. Urgency Signal
-
-Use careful language.
-
-Do NOT say:
-
-```text
-FAKE DISCOUNT
-FRAUD
-MANIPULATION CONFIRMED
-```
-
-Preferred:
-
-```text
-Potential Persistent Urgency
-Recurring Offer Detected
-Repeated Countdown
-```
-
-Example badge:
-
-```text
-⚠ Recurring urgency
-Seen across 6 snapshots
-```
-
-Clicking/hovering should reveal why the flag exists.
-
----
-
-# 12. Self-Healing Panel
-
-This is the **hackathon showcase component**.
-
-It should look like a live infrastructure/monitoring feed.
-
-Example:
-
-```text
-SELF-HEALING ACTIVITY
-
-● 14:32  Scaler scraper
-          Price field extraction failed
-
-          ↓ Detect
-
-● 14:32  Validation failure
-          current_price returned empty
-
-          ↓ Heal
-
-● 14:33  Bright Data repair completed
-
-✓ 14:33  Scraper recovered
-```
-
-Make this visually impressive but not noisy.
-
-Use subtle animated status indicators.
-
-A live recovery event can use a small pulse animation.
-
----
-
-# 13. Scraper Health
-
-Create a compact health overview:
-
-```text
-SCRAPER HEALTH
-
-Scaler              ● Healthy
-Coding Ninjas       ● Healthy
-Newton School       ● Healing
-PW                  ● Healthy
-```
-
-Status states:
-
-- Healthy
-- Warning
-- Healing
-- Failed
-- Disabled
-
-Use color only as a secondary cue. Pair colors with text/icons for accessibility.
-
----
-
-# 14. Course Detail Page
-
-When a user opens a course:
-
-```text
-Course title
-Platform
-Current price
-Original price
-Discount
-Urgency status
-Last scraped
-Course URL
-
-Price information
-Urgency observations
-Scraper status
-Recent activity
-```
-
-Keep it simple.
-
-The detail page should answer:
-
-> "What is happening with this course right now, and why?"
-
----
-
-# 15. Interactions
-
-The interface should have many **small, useful interactions**, not flashy animations.
+You get ₹4,250
+You pay ₹850
+Net +₹3,400
+
+### Pending people
+Separate:
+- people who owe you
+- people you owe
 
 Examples:
+- Rahul owes you ₹500
+- You owe Priya ₹300
+- All settled
 
-### Hover
+### Quick actions
+At minimum:
+- Add expense
+- Settle up
+- Create group
+- Add friend/person
 
-- table row subtly highlights
-- KPI card slightly elevates
-- icons reveal tooltips
-- status badge shows explanation
+Add Expense should remain the strongest action.
 
-### Click
+### Recent groups
+Show group name, member count, current user position, and concise status.
 
-- course row opens detail
-- urgency badge opens evidence
-- scraper status opens activity
-- price-change item opens comparison
+### Recent activity
+Show meaningful events such as expense added, settlement recorded, group created, expense edited, and member changes.
 
-### Copy
+### New-user state
+Guide the user through:
+1. Add a friend/person
+2. Create a group
+3. Add the first expense
 
-If a useful URL/identifier is displayed:
+Never leave a large blank dashboard.
 
-```text
-Copy
-✓ Copied
-```
+## 9. Groups
 
-with a tiny feedback animation.
+### Groups list
+Support list, search, useful filters, create group, balance status, and fast group access.
 
----
+### Create group
+Fields:
+- group name
+- optional icon/image
+- currency
+- members
 
-# 16. Animation Philosophy
+Prevent duplicate or partial submissions.
 
-Animation should communicate state, not decorate the UI.
+### Group detail
+Use a clear hierarchy:
+Group header → current balance → members/summary → expenses → balances → totals → activity.
 
-Use:
+Primary actions:
+- Add expense
+- Settle up
 
-- opacity transitions
-- 150–250ms hover transitions
-- subtle scale
-- smooth sidebar transitions
-- skeleton loading
-- status pulse
-- number transitions when values change
-- subtle row insertion/removal
+Secondary actions:
+- invite/share
+- members
+- settings
 
-Avoid:
+### Group management
+Where authorized:
+- add/remove members
+- invite
+- leave group
+- edit group
+- group currency/settings
 
-- constant floating animations
-- excessive bouncing
-- large page transitions
-- distracting parallax
-- animation on every element
+Membership changes must not corrupt historical expense data.
 
-The interface should feel **alive but calm**.
+## 10. Friends / Person-to-Person
 
----
+The app must support expenses directly between people without requiring a group.
 
-# 17. Motion Principles
+### Friends list
+Show search, name, avatar, current balance, and clear status.
 
-Use Framer Motion where it genuinely improves interaction.
+### Friend detail
+Show current balance, shared expense history, settlements, relevant totals, Add expense, and Settle up.
 
-Suggested motion:
+## 11. Add Expense
 
-```text
-Page enter:
-opacity 0 → 1
-small translateY → 0
+This is the most important transactional flow.
 
-Card hover:
-translateY(-1px)
+Default path:
 
-Sidebar:
-width transition
+Amount
+↓
+Description
+↓
+Paid by
+↓
+Participants
+↓
+Equal split
+↓
+Save
 
-Modal:
-opacity + small scale
+### Amount
+Use a prominent numeric input, visible currency, numeric keyboard, immediate validation, and clear errors.
 
-Status update:
-small pulse
+### Description
+Keep simple. Examples: Dinner, Groceries, Cab, Hotel.
 
-Table:
-subtle row transition
-```
+### Context
+An expense can belong to a group or person-to-person relationship. Context must be obvious.
 
-Respect:
+### Payer
+Allow the current user and eligible participants/members.
 
-```text
-prefers-reduced-motion
-```
+### Participants
+Clearly show who is included. Make selection/deselection easy.
 
-Users who disable motion should still get a complete functional experience.
+### Split methods
+Phase 1 supports:
+1. Equal
+2. Exact amounts
+3. Percentage
+4. Shares
+5. Adjustment where explicitly supported
 
----
+Equal is the default. Advanced methods use progressive disclosure.
 
-# 18. Loading States
+### Split validation
+Show:
+Total: ₹1,000
+Assigned: ₹1,000
+Remaining: ₹0
 
-Never show a blank dashboard.
+Do not allow an ambiguous save state. Server state remains authoritative.
 
-Use skeletons for:
+### Currency
+Make currency visible and easy to change.
 
-- KPI cards
-- tables
-- activity feeds
-- detail sections
+### Date
+Default appropriately and allow editing.
 
-Skeletons should match the approximate final layout.
+### Notes
+Optional and visually secondary.
 
-Avoid giant generic spinners.
+### Attachments
+Where supported, show upload/progress/failure clearly without blocking the core flow unnecessarily.
 
----
+### Save
+Prevent duplicate submissions, show progress, preserve input on validation failure, provide success feedback, and reconcile balances/activity after success.
 
-# 19. Empty States
+## 12. Expense Detail
 
-Empty states should explain what happened.
+Show:
+- description
+- total
+- currency
+- date
+- payer
+- participants
+- each person's share
+- current user's position
+- group/person context
+- note
+- attachment when available
+
+Actions:
+- Edit
+- Delete
+- Settle where relevant
+
+Editing should clearly warn that balances can change.
+
+Deleting should require confirmation and explain that balances may change.
+
+## 13. Balances
+
+The user should not need accounting knowledge.
+
+Show:
+- You get
+- You pay
+- Net
+- people who owe you
+- people you owe
+
+Group and friend balance views should explain who owes whom and how much.
+
+Use explicit language rather than unexplained signs.
+
+## 14. Debt Simplification
+
+When simplified debts are shown, explain the result in plain language.
 
 Example:
+Instead of several payments, A pays C ₹500.
 
-```text
-No price changes yet
+Show:
+- who pays
+- who receives
+- amount
+- why the suggestion exists
 
-PriceRadar hasn't detected a price movement
-for the selected courses.
+Do not expose unnecessary mathematical complexity.
 
-Last scan: 8 minutes ago
-```
+## 15. Settle Up
 
-Do not make empty states look like errors.
+Show:
+- payer
+- receiver
+- amount
+- currency
+- context
+- optional note
+- date where applicable
 
----
+Before recording:
+You are recording:
+You → Rahul
+₹500
 
-# 20. Error States
+After success:
+- confirmation
+- updated balance
+- activity entry
+- useful return path
 
-Errors should be calm and actionable.
+## 16. Activity
 
-Example:
+Chronological meaningful events:
+- expense added
+- expense edited
+- expense deleted
+- settlement recorded
+- group created
+- member changes
 
-```text
-Unable to load course data
+Show actor, action, amount when relevant, and useful date/time context.
 
-The latest dashboard data could not be retrieved.
+## 17. Search & Filters
 
-Try again
-```
+Search should be contextual for:
+- groups
+- friends
+- expenses
+- activity
 
-Do not expose:
+Filters should match the current screen. Avoid an oversized global search system unless it provides clear value.
 
-- stack traces
-- database errors
-- credentials
-- internal infrastructure details
+## 18. Account / Settings
 
----
+Include:
+- profile
+- preferences
+- notifications
+- appearance
+- security
+- data/export where supported
+- help/support
+- sign out
 
-# 21. Responsive Design
+Keep destructive account actions clearly separated.
 
-Desktop is the primary hackathon presentation target.
+## 19. Design System
 
-Still support:
+Create reusable components such as:
+- AppHeader
+- BottomNavigation
+- PrimaryButton
+- SecondaryButton
+- IconButton
+- Card
+- BalanceCard
+- PersonRow
+- GroupRow
+- ExpenseRow
+- ActivityItem
+- Avatar
+- Badge
+- AmountDisplay
+- CurrencySelector
+- BottomSheet
+- Modal
+- TextInput
+- AmountInput
+- SegmentedControl
+- Skeleton
+- EmptyState
+- ErrorState
+- ConfirmationDialog
 
-### Desktop
-Full sidebar + dashboard.
+Do not create multiple components with inconsistent spacing or behavior for the same purpose.
 
-### Tablet
-Compact sidebar + responsive cards/table.
+## 20. Typography
 
-### Mobile
-Collapsed navigation + horizontally scrollable data table or carefully transformed course cards.
+Choose one modern sans-serif family and use it consistently.
 
-Do not simply shrink the desktop UI.
-
----
-
-# 22. Typography
-
-Use a modern highly readable sans-serif typeface.
+Suitable options include Inter, Manrope, or Plus Jakarta Sans.
 
 Hierarchy:
+- screen title: strong
+- section title: semibold
+- large amount: bold
+- body: regular
+- metadata: smaller/muted
 
-```text
-Page title       Strong
-Section heading  Medium/semibold
-Metric           Bold
-Body             Regular
-Metadata         Smaller/muted
-```
+## 21. Color
 
-Avoid excessive font weights.
+Use a restrained neutral foundation.
 
-Do not use more than necessary.
+Roles:
+- background
+- surface
+- elevated surface
+- primary text
+- secondary text
+- primary accent
+- positive
+- negative
+- warning
+- info
 
----
+Positive and negative financial states should be paired with text/icons/direction, not color alone.
 
-# 23. Color Philosophy
+Avoid rainbow interfaces, excessive gradients, neon financial colors, and decorative color blocks.
 
-Use a restrained neutral base.
+## 22. Cards, Borders & Elevation
 
-Recommended conceptual system:
+Cards should create hierarchy rather than turn every element into a floating box.
 
-```text
-Background     neutral
-Surface        slightly elevated neutral
-Text           high contrast
-Muted text     subdued neutral
+Use consistent radius, padding, subtle borders/elevation, and clear hierarchy.
 
-Primary        one strong accent
-Success        green
-Warning        amber
-Danger         red
-Info           blue
-```
+Avoid huge empty cards, heavy shadows, excessive glassmorphism, and excessive rounding.
 
-Do not use a rainbow dashboard.
+## 23. Bottom Sheets
 
-Accent colors should communicate meaning.
+Use for contextual selection where appropriate:
+- payer
+- participants
+- split method
+- currency
+- filters
+- lightweight actions
 
----
+Provide clear title, selection state, dismissal, Android back behavior, and accessible touch targets.
 
-# 24. Borders & Shadows
+Do not make every interaction a bottom sheet.
 
-Use subtle borders.
+## 24. Motion & Haptics
 
-Prefer:
+Motion communicates state.
 
-```text
-1px low-contrast border
-+
-very subtle shadow
-```
+Use restrained transitions for:
+- content entrance
+- bottom sheets
+- selection changes
+- success feedback
+- list changes
+- loading transitions
 
-rather than heavy cards.
+Avoid bouncing, parallax, constant floating animation, and animation on every element.
 
-Cards should visually belong to the same surface system.
+Use Expo Haptics only for meaningful actions such as expense saved or settlement recorded.
 
-Avoid excessive drop shadows.
+## 25. Loading, Empty & Error States
 
----
+Never leave important screens blank.
 
-# 25. Border Radius
+Use skeletons for Dashboard, Groups, Friends, Expenses, Balances, Activity, and detail screens.
 
-Use a consistent radius system.
+Use localized progress indicators for submit actions.
+
+Empty states should explain the next action.
 
 Example:
+No expenses yet
+Add your first shared expense to get started.
+[Add expense]
 
-```text
-Small controls    8px
-Cards             12–16px
-Large panels      16–20px
-```
+Errors should be calm and actionable:
+Couldn't save expense
+Your expense was not saved. Check your connection and try again.
+[Try again]
 
-Do not make every element extremely rounded.
+Never expose stack traces, SQL, credentials, tokens, or infrastructure details.
 
----
+## 26. Offline / Poor Network UX
 
-# 26. Design System Consistency
+When offline functionality is introduced, distinguish:
+- loading
+- offline
+- stale data
+- syncing
+- sync failure
 
-Create reusable components:
+Preserve user input, prevent duplicate submissions, provide retry, and communicate conflicts.
 
-```text
-Button
-Badge
-Card
-KPI Card
-DataTable
-StatusIndicator
-Tooltip
-Dropdown
-Modal
-Tabs
-Skeleton
-EmptyState
-ErrorState
-ActivityItem
-```
+Do not falsely present unsynchronized financial data as authoritative.
 
-Do not implement visually similar components separately with different spacing.
+Server state is authoritative after synchronization.
 
----
-
-# 27. Accessibility
+## 27. Accessibility
 
 Required:
+- accessible labels
+- readable contrast
+- meaningful focus/selection state
+- sufficient touch targets
+- screen-reader-friendly controls
+- logical navigation order
+- clear validation errors
+- non-color-only status communication
+- reduced-motion support where possible
 
-- keyboard navigation
-- visible focus states
-- semantic HTML
-- accessible buttons
-- accessible form labels
-- sufficient contrast
-- meaningful ARIA labels where necessary
-- reduced-motion support
+## 28. Performance
 
-Do not rely only on color to communicate status.
-
----
-
-# 28. Performance
-
-Avoid unnecessary animation/rendering.
-
-Use:
-
-- efficient React components
+Prefer:
+- efficient list rendering
 - stable keys
-- memoization only where justified
+- optimized images
+- minimal unnecessary re-renders
 - lazy loading where useful
-- optimized assets
+- memoization only when justified
 
-Do not add heavy visualization libraries unless actually required.
+Do not add large UI libraries unnecessarily.
 
----
+## 29. Financial UI Safety
 
-# 29. Visual Quality Bar
+The frontend is never the authoritative financial source.
 
-Before considering UI complete, ask:
+The server must validate:
+- monetary values
+- participants
+- payer
+- split totals
+- balances
+- settlements
 
-### Does it feel premium?
-Would this look credible beside modern SaaS products?
+Client calculations may be used only for previews. Authoritative values come from the server.
 
-### Does it feel simple?
-Can a new user understand the dashboard quickly?
+## 30. Financial Mutation UX
 
-### Does it feel trustworthy?
-Does the visual design communicate data integrity?
+For every money-changing operation:
 
-### Does it feel alive?
-Are there useful micro-interactions without visual noise?
+1. Show what will change.
+2. Validate.
+3. Prevent duplicate submission.
+4. Show progress.
+5. Preserve input on safe retry.
+6. Confirm success.
+7. Update affected balances/activity.
+8. Explain meaningful side effects.
 
-### Does it feel original?
-Are references used as inspiration rather than copied?
+Examples:
+- editing an expense can change what people owe
+- deleting an expense can change balances
+- recording a settlement reduces an outstanding amount
 
----
+## 31. What NOT To Build
 
-# 30. Implementation Rule for Claude Code
+Do not introduce into the Phase 1 UI:
+- PriceRadar dashboards
+- course pricing tables
+- scraper health
+- self-healing panels
+- urgency signals
+- desktop-first admin sidebars
+- analytics-heavy SaaS dashboards
+- artificial expense limits
+- ads
+- AI
+- UPI/payment automation
+- speculative gamification
+- unnecessary social feeds
 
-When implementing UI:
+## 32. Implementation Rules for Claude Code
 
-1. Read this file first.
-2. Follow the design direction consistently.
-3. Use the supplied Dribbble references for inspiration.
-4. Do not copy the reference designs.
-5. Build reusable components.
-6. Implement loading/error/empty states.
-7. Add subtle micro-interactions.
-8. Keep animation purposeful.
-9. Test responsive layouts.
-10. Test keyboard accessibility.
-11. Do not sacrifice functionality for visual effects.
+1. Read this file before UI work.
+2. Cross-check requirements against PRD.md.
+3. Preserve existing financial behavior.
+4. Preserve familiar expense-sharing workflows.
+5. Build mobile-first.
+6. Use reusable components.
+7. Keep financial information extremely clear.
+8. Use progressive disclosure.
+9. Implement loading, empty, error, and offline states.
+10. Use subtle motion only when useful.
+11. Use haptics only for meaningful actions.
+12. Test Android back behavior.
+13. Test keyboard behavior for forms.
+14. Test small and large phone layouts.
+15. Never let visual changes alter financial semantics.
+16. Do not invent financial rules.
+17. Do not perform large UI redesigns while features are unstable.
+18. Do not add dependencies without justification.
+19. Do not copy another product's branding or proprietary assets.
+20. Keep the UI easy to redesign later.
 
-The final UI should feel like a **premium price-intelligence SaaS product**, not a generic admin dashboard.
+## 33. Final Design Direction
 
----
+The app should feel:
 
-# 31. Final Design Statement
+Familiar → Clear → Fast → Trustworthy → Premium
 
-PriceRadar should visually communicate:
+The goal is not to make expense sharing flashy.
 
-> **"Complex pricing intelligence, made simple."**
-
-The user should feel that the product is:
-
-**clean → trustworthy → intelligent → fast → premium**
-
-without feeling over-designed.
+> Make shared money feel simple, understandable, and trustworthy.

@@ -222,20 +222,26 @@ Implement
 
 ## 2.1 Money
 
-- [ ] Integer minor-unit representation.
-- [ ] Currency type.
-- [ ] Exact arithmetic.
-- [ ] Comparison helpers.
-- [ ] Formatting helpers.
-- [ ] Invalid-state handling.
+- [x] Integer minor-unit representation. (`src/domain/money/money.ts` — `number` minor units with `Number.isSafeInteger` guard)
+- [x] Currency type. (`src/domain/money/currency.ts` — `CurrencyCode`, `CurrencyMeta`, `CURRENCY_META`)
+- [x] Exact arithmetic. (`add`, `subtract`, `negate`, `abs` — all exact integer arithmetic, no floating-point)
+- [x] Comparison helpers. (`compare`, `eq`, `gt`, `lt`, `gte`, `lte`, `isZero`, `isPositive`, `isNegative`)
+- [x] Formatting helpers. (`format` — presentation-only, does not mutate Money)
+- [x] Invalid-state handling. (`MoneyError` hierarchy: `InvalidMoneyError`, `CurrencyMismatchError`, `InvalidCurrencyError`, `InvalidPrecisionError`, `UnsafeIntegerError`)
+- [x] Decimal parsing. (`fromDecimal` — string-based, no floating-point multiplication)
+- [x] Serialization. (`toSerializable`, `fromSerializable` — deterministic `{ amountMinor, currency }`)
+- [x] Financial invariants documented. (`docs/FINANCIAL_INVARIANTS.md`)
 
 ### Tests
-- [ ] Zero.
-- [ ] Smallest unit.
-- [ ] Large value.
-- [ ] Addition/subtraction.
-- [ ] Currency mismatch.
-- [ ] Invalid values.
+- [x] Zero. (construction, addition identity, subtraction identity, format, negation)
+- [x] Smallest unit. (1 paise INR, 1 JPY)
+- [x] Large value. (Number.MAX_SAFE_INTEGER accepted, MAX_SAFE_INTEGER+1 rejected)
+- [x] Addition/subtraction. (identity, commutativity, overflow, negation inverse)
+- [x] Currency mismatch. (add, subtract, compare all throw CurrencyMismatchError)
+- [x] Invalid values. (NaN, Infinity, non-integer, negative overflow, empty string, malformed decimal, precision violations)
+
+### Gate
+- [x] Financial domain foundation operational. (Verified via 106 money unit tests, 193 total tests, typecheck PASS, lint PASS)
 
 ## 2.2 Equal split
 
