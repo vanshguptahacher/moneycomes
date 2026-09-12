@@ -15,6 +15,20 @@
       "when": 1789151628934,
       "tag": "0001_true_blue_marvel",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789249195406,
+      "tag": "0002_fluffy_ezekiel",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789249480277,
+      "tag": "0003_rapid_sheva_callister",
+      "breakpoints": true
     }
   ]
 }

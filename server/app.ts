@@ -64,7 +64,7 @@ app.use(
 // ============================================================================
 
 // Better Auth handler endpoints
-app.on(["POST", "GET"], "/api/auth/**", (c) => {
+app.all("/api/auth/*", (c) => {
   return auth.handler(c.req.raw);
 });
 
@@ -79,3 +79,5 @@ app.route("/api/v1", apiV1Routes);
 // ============================================================================
 app.onError(errorHandler);
 app.notFound(notFoundHandler);
+
+export default app;

@@ -44,6 +44,34 @@ export const groupMembers = pgTable(
   ]
 );
 
+export const GROUP_ROLES = {
+  MEMBER: "member",
+  ADMIN: "admin",
+} as const;
+
+export type GroupRole = (typeof GROUP_ROLES)[keyof typeof GROUP_ROLES];
+
+/**
+ * Validates group membership input IDs.
+ * Enforces non-empty string IDs for both group and user.
+ */
+export function validateGroupMembershipInput(
+  groupId: string,
+  userId: string
+): { groupId: string; userId: string } {
+  if (!groupId || typeof groupId !== "string" || !groupId.trim()) {
+    throw new Error("Valid groupId is required for group membership");
+  }
+  const trimmedGroupId = groupId.trim();
+
+  if (!userId || typeof userId !== "string" || !userId.trim()) {
+    throw new Error("Valid userId is required for group membership");
+  }
+  const trimmedUserId = userId.trim();
+
+  return { groupId: trimmedGroupId, userId: trimmedUserId };
+}
+
 export type Group = typeof groups.$inferSelect;
 export type NewGroup = typeof groups.$inferInsert;
 export type GroupMember = typeof groupMembers.$inferSelect;

@@ -29,7 +29,7 @@ Protect:
 
 ## 3. Authentication
 
-Use the project's approved authentication implementation.
+Use **Better Auth** as the approved authentication and session-management implementation. Better Auth is persisted in the application's Supabase PostgreSQL database and is exposed to the mobile app only through the Hono API boundary. Do not introduce Supabase Auth as a second authentication system unless the architecture is explicitly re-approved.
 
 Requirements:
 
@@ -236,6 +236,8 @@ Rate limits must not create a way to enumerate valid users.
 
 ## 14. Database Security
 
+The current production database is **Supabase PostgreSQL**. The mobile application must never connect directly to PostgreSQL; database access is server-side through the Hono API and Drizzle.
+
 - Database must not be publicly exposed unnecessarily.
 - Use least-privilege credentials.
 - Use parameterized/ORM queries.
@@ -260,6 +262,8 @@ Use environment/secrets management.
 Safe example files may contain placeholders only.
 
 ## 16. File Upload Security
+
+The current attachment provider is **Supabase Storage**, accessed through the Hono API. Storage credentials must remain server-side.
 
 If receipts/files are supported:
 
@@ -365,7 +369,38 @@ Threat-model at least:
 - stale-session access
 - privilege escalation
 
-## 23. Security Testing
+## 23. Infrastructure Security
+
+The current production boundary is:
+
+```text
+Expo Android App
+      ↓ HTTPS
+Cloudflare Workers
+      ↓
+Hono API
+      ↓
+Drizzle ORM
+      ↓
+Supabase PostgreSQL
+
+Hono API → Supabase Storage
+Hono API → Better Auth
+```
+
+Requirements:
+
+- Cloudflare Workers is the current API hosting boundary.
+- Hono is the application/API security boundary.
+- Supabase PostgreSQL is authoritative for relational application data.
+- Supabase Storage is used for receipts/attachments.
+- Privileged database, authentication, and storage credentials remain server-side.
+- Production traffic uses HTTPS.
+- Provider-specific credentials must be stored using deployment secrets/environment configuration.
+- Do not add Oracle Cloud VMs, Caddy, self-hosted PostgreSQL, or Oracle Object Storage without an explicit architecture decision.
+- Local PostgreSQL may be used for isolated development/testing; it is not production authority.
+
+## 24. Security Testing
 
 Before release:
 
@@ -380,7 +415,7 @@ Before release:
 - dependency audit
 - production configuration review
 
-## 24. Security Incident Rule
+## 25. Security Incident Rule
 
 If a suspected security defect affects user data, authentication, authorization, or financial integrity:
 
@@ -394,7 +429,7 @@ If a suspected security defect affects user data, authentication, authorization,
 
 Do not hide security failures by suppressing errors.
 
-## 25. Release Gate
+## 26. Release Gate
 
 A critical security defect blocks release.
 

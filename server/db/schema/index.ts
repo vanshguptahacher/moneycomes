@@ -7,4 +7,6 @@ export * from "./expenses.js";
 export * from "./settlements.js";
 export * from "./activity.js";
 export * from "./auth.js";
+export * from "./notifications.js";
+export * from "./attachments.js";
 export * from "./relations.js";

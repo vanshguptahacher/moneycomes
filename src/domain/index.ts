@@ -91,3 +91,118 @@ export {
   // Operation
   splitExactly,
 } from "./money/split-exact.js";
+
+// Percentage Split
+export {
+  // Constants
+  TOTAL_BASIS_POINTS,
+  MIN_BASIS_POINTS,
+  MAX_BASIS_POINTS,
+
+  // Errors
+  NegativePercentageError,
+  InvalidPercentageError,
+  PercentageTotalError,
+
+  // Types
+  type PercentageAllocationInput,
+  type PercentageSplitResult,
+
+  // Operations
+  splitByPercentage,
+  percentageStringToBasisPoints,
+  basisPointsToPercentageString,
+} from "./money/split-percentage.js";
+
+// Shares Split
+export {
+  // Errors
+  NegativeShareError,
+  InvalidShareError,
+  ZeroTotalSharesError,
+
+  // Types
+  type ShareAllocationInput,
+  type SharesSplitResult,
+
+  // Operation
+  splitByShares,
+} from "./money/split-shares.js";
+
+// Balance Engine
+export {
+  // Errors
+  InvalidPayerError,
+  BalanceReconciliationError,
+
+  // Types
+  type ExpenseBalanceInput,
+  type UserBalance,
+  type ExpenseBalanceResult,
+
+  // Operations & helpers
+  calculateExpenseBalances,
+  getUserBalance,
+} from "./money/balance.js";
+
+// Group Balance
+export {
+  // Errors
+  EmptyGroupMembersError,
+  InvalidMemberError,
+  DuplicateMemberError,
+  UnknownGroupMemberError,
+  InvalidSettlementError,
+
+  // Types
+  type GroupSettlementInput,
+  type GroupBalanceInput,
+  type MemberGroupBalance,
+  type GroupBalanceResult,
+
+  // Operations & helpers
+  calculateGroupBalances,
+  getMemberBalance,
+} from "./money/group-balance.js";
+
+// Debt Simplification
+export {
+  // Errors
+  EmptyBalancesError,
+  UnreconciledBalancesError,
+
+  // Types
+  type NetBalanceInput,
+  type SimplifyDebtsInput,
+  type SimplifiedTransfer,
+  type SimplifiedDebtsResult,
+
+  // Operation
+  simplifyDebts,
+} from "./money/debt-simplification.js";
+
+// Settlement Engine
+export {
+  // Errors
+  SelfSettlementError,
+  InvalidSettlementAmountError,
+  OverSettlementError,
+  DebtorCreditorMismatchError,
+  InvalidSettlementPartiesError,
+  DuplicateSettlementError,
+
+  // Types
+  type SettlementInput,
+  type Settlement,
+  type RecalculateBalancesInput,
+
+  // Operations & helpers
+  createSettlement,
+  validateSettlement,
+  isFullSettlement,
+  isPartialSettlement,
+  isMutualFullSettlement,
+  applySettlement,
+  applySettlements,
+  recalculateBalances,
+} from "./money/settlement.js";

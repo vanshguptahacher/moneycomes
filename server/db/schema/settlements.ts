@@ -38,3 +38,85 @@ export const settlements = pgTable(
 
 export type Settlement = typeof settlements.$inferSelect;
 export type NewSettlement = typeof settlements.$inferInsert;
+
+/**
+ * Validates settlement input parameters at the boundary.
+ * Enforces:
+ * - payerId and receiverId are non-empty strings.
+ * - payerId !== receiverId (no self-settlements).
+ * - amountMinor is a positive safe integer (> 0, <= Number.MAX_SAFE_INTEGER).
+ * - currencyCode is a non-empty string.
+ * - groupId is an optional non-empty string or null.
+ * - createdById is a non-empty string (defaults to payerId if omitted).
+ */
+export function validateSettlementInput(input: {
+  payerId: string;
+  receiverId: string;
+  amountMinor: number;
+  currencyCode: string;
+  groupId?: string | null;
+  createdById?: string;
+  notes?: string | null;
+  settledAt?: Date | null;
+}): {
+  payerId: string;
+  receiverId: string;
+  amountMinor: number;
+  currencyCode: string;
+  groupId: string | null;
+  createdById: string;
+  notes: string | null;
+  settledAt: Date;
+} {
+  if (!input) {
+    throw new Error("Settlement input is required");
+  }
+
+  const { payerId, receiverId, amountMinor, currencyCode, groupId, createdById, notes, settledAt } = input;
+
+  if (!payerId || typeof payerId !== "string" || !payerId.trim()) {
+    throw new Error("Valid payerId is required for settlement");
+  }
+  const cleanPayerId = payerId.trim();
+
+  if (!receiverId || typeof receiverId !== "string" || !receiverId.trim()) {
+    throw new Error("Valid receiverId is required for settlement");
+  }
+  const cleanReceiverId = receiverId.trim();
+
+  if (cleanPayerId === cleanReceiverId) {
+    throw new Error(`Self-settlement is not permitted: payer and receiver are both "${cleanPayerId}"`);
+  }
+
+  if (
+    typeof amountMinor !== "number" ||
+    !Number.isInteger(amountMinor) ||
+    amountMinor <= 0 ||
+    amountMinor > Number.MAX_SAFE_INTEGER
+  ) {
+    throw new Error("amountMinor must be a positive safe integer representing minor currency units");
+  }
+
+  if (!currencyCode || typeof currencyCode !== "string" || !currencyCode.trim()) {
+    throw new Error("Valid currencyCode is required for settlement");
+  }
+  const cleanCurrencyCode = currencyCode.trim().toUpperCase();
+
+  const cleanGroupId = groupId && typeof groupId === "string" && groupId.trim() ? groupId.trim() : null;
+  const cleanCreatedById =
+    createdById && typeof createdById === "string" && createdById.trim()
+      ? createdById.trim()
+      : cleanPayerId;
+
+  return {
+    payerId: cleanPayerId,
+    receiverId: cleanReceiverId,
+    amountMinor,
+    currencyCode: cleanCurrencyCode,
+    groupId: cleanGroupId,
+    createdById: cleanCreatedById,
+    notes: notes ? notes.trim() : null,
+    settledAt: settledAt instanceof Date ? settledAt : new Date(),
+  };
+}
+

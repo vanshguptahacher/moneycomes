@@ -14,6 +14,41 @@ The objective is to minimize:
 
 Do not implement an entire large feature in one step.
 
+## Infrastructure & Hosting Baseline (Locked)
+
+The current production baseline is managed-service and free-first:
+
+```text
+Expo Android App
+      ↓ HTTPS
+Cloudflare Workers
+      ↓
+Hono API
+      ↓
+Drizzle ORM
+      ↓
+Supabase PostgreSQL
+
+Hono API → Supabase Storage
+Hono API → Better Auth
+```
+
+Rules:
+
+- The mobile app never connects directly to PostgreSQL.
+- Supabase PostgreSQL is the authoritative relational database.
+- Better Auth remains the authentication/session system. Do not introduce Supabase Auth unless explicitly approved.
+- Supabase Storage is the current attachment/receipt storage provider.
+- Cloudflare Workers is the current production host for the Hono API.
+- Local PostgreSQL may be used for development and automated tests; deployed environments use Supabase PostgreSQL.
+- Provider-specific integrations must stay behind application/service boundaries where practical.
+- Free-tier quotas are infrastructure constraints, not artificial product limits.
+- Oracle Cloud, self-hosted PostgreSQL, Caddy, and Oracle Object Storage are not required for the current deployment baseline.
+
+Do not replace this architecture or add a second production database/storage provider without an explicit architecture decision.
+
+---
+
 ## 2. High-Level Sequence
 
 ```text
@@ -87,9 +122,11 @@ All baseline checks pass.
 ## 1.2 Database Bootstrap
 
 - PostgreSQL connection
+- Supabase PostgreSQL production configuration
 - Drizzle configuration
 - migration system
 - database health check
+- local PostgreSQL development/test configuration
 
 ## 1.3 Authentication
 
@@ -430,9 +467,11 @@ UX review passes without changing financial behavior.
 
 ## 8.4 Data Protection
 
-- backup procedure
+- Supabase PostgreSQL backup/recovery procedure
+- Supabase Storage protection/recovery procedure
 - migration recovery procedure
 - disaster recovery documentation
+- verify the actual backup/restore capabilities of the selected production tier
 
 ## 8.5 Performance
 
@@ -442,6 +481,23 @@ UX review passes without changing financial behavior.
 - rendering
 - unnecessary refetches
 
+## 8.6 Production Deployment
+
+Deploy the API using the locked provider baseline.
+
+- [ ] Configure Cloudflare Workers deployment.
+- [ ] Configure production environment variables/secrets.
+- [ ] Configure the Hono API for the Workers runtime.
+- [ ] Configure the Supabase PostgreSQL connection.
+- [ ] Configure Supabase Storage for private attachments.
+- [ ] Configure Better Auth against the production PostgreSQL database.
+- [ ] Run production database migrations safely.
+- [ ] Verify API health/readiness behavior.
+- [ ] Verify HTTPS and production CORS/origin rules.
+- [ ] Verify rate limits and abuse controls where required.
+- [ ] Run production smoke tests.
+- [ ] Document rollback/recovery steps.
+
 ### Exit gate
 
 No known critical security, data-integrity, or financial defects.
@@ -450,11 +506,21 @@ No known critical security, data-integrity, or financial defects.
 
 # Phase 9 — Release Candidate
 
-## 9.1 Clean Build
+## 9.1 Production Environment Verification
+
+Before the final Android release build, verify the deployed backend and managed services:
+
+- [ ] Cloudflare Workers API is reachable over HTTPS.
+- [ ] Supabase PostgreSQL connectivity is healthy.
+- [ ] Supabase Storage upload/access rules are working.
+- [ ] Better Auth sign-in/session flows work against production.
+- [ ] No production secrets are embedded in the mobile app.
+
+## 9.2 Clean Build
 
 Run the Android build from a clean state.
 
-## 9.2 Regression
+## 9.3 Regression
 
 Run:
 
@@ -465,11 +531,11 @@ Run:
 - E2E tests
 - Android smoke tests
 
-## 9.3 Security Review
+## 9.4 Security Review
 
 Complete the security checklist.
 
-## 9.4 UX Review
+## 9.5 UX Review
 
 Check:
 
@@ -482,7 +548,7 @@ Check:
 - errors
 - slow network
 
-## 9.5 Release Gate
+## 9.6 Release Gate
 
 Release only when:
 

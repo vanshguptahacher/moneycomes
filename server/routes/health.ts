@@ -5,10 +5,15 @@ export const healthRoutes = new Hono();
 
 // Liveness probe (checks process is running)
 healthRoutes.get("/", (c) => {
+  const uptimeSeconds =
+    typeof process !== "undefined" && typeof process.uptime === "function"
+      ? Math.floor(process.uptime())
+      : 0;
+
   return c.json({
     status: "ok",
     timestamp: new Date().toISOString(),
-    uptimeSeconds: Math.floor(process.uptime()),
+    uptimeSeconds,
   });
 });
 

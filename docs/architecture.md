@@ -36,9 +36,10 @@ Node 25 is allowed for local development, but compatibility must be validated by
 **Frontend:** Expo SDK 56 + Expo Prebuild/CNG + React Native 0.85.x + TypeScript  
 **Backend:** Hono + TypeScript  
 **ORM:** Drizzle ORM  
-**Database:** PostgreSQL  
-**Infrastructure:** Oracle Cloud Always Free + Docker  
-**Reverse Proxy:** Caddy
+**Database:** Supabase PostgreSQL  
+**Backend hosting:** Cloudflare Workers  
+**File storage:** Supabase Storage  
+**Authentication:** Better Auth with PostgreSQL-backed persistence
 
 ---
 
@@ -53,9 +54,9 @@ The architecture must support:
 - A new Dashboard/Home screen.
 - Reliable financial calculations.
 - Secure authentication and authorization.
-- PostgreSQL as the authoritative database.
-- Self-hosted deployment on Oracle Cloud.
-- Docker-based infrastructure.
+- Supabase PostgreSQL as the authoritative database.
+- Managed/serverless API hosting on Cloudflare Workers.
+- A free-first, low-operations production deployment model.
 - Offline-aware mobile behavior.
 - Receipt/file storage.
 - Notifications.
@@ -225,11 +226,10 @@ The system consists of these major components:
 4. Business/service layer
 5. Expense calculation engine
 6. PostgreSQL database
-7. Object storage
+7. Supabase Storage
 8. Notification infrastructure
-9. Reverse proxy
-10. Docker infrastructure
-11. Backup system
+9. Cloudflare Workers runtime
+10. Backup/recovery system
 12. Monitoring/logging
 
 ---
@@ -2340,3 +2340,49 @@ Before making architectural changes:
 Phase 1 should not try to solve the architecture of a company with millions of users.
 
 It should create a strong, clean foundation that can grow without forcing unnecessary complexity today.
+
+
+# 13. Deployment & Provider Boundaries
+
+## 13.1 Production Hosting Baseline
+
+The current production baseline is intentionally managed-service based:
+
+```text
+Expo Android App
+      ↓ HTTPS
+Cloudflare Workers
+      ↓
+Hono API
+      ↓
+Drizzle ORM
+      ↓
+Supabase PostgreSQL
+
+Hono API → Supabase Storage
+Hono API → Better Auth
+```
+
+The mobile application must never connect directly to PostgreSQL. Database credentials and privileged storage credentials must remain server-side.
+
+## 13.2 Provider Responsibilities
+
+- **Cloudflare Workers:** public API execution and edge/serverless hosting for Hono.
+- **Supabase PostgreSQL:** authoritative relational database.
+- **Supabase Storage:** receipt and attachment object storage.
+- **Better Auth:** authentication and session management, persisted in PostgreSQL.
+- **Drizzle:** schema access and migrations.
+
+Oracle Cloud is not part of the current required production architecture. Do not introduce an Oracle VM, self-hosted PostgreSQL container, Caddy reverse proxy, or Oracle Object Storage unless a later architecture decision explicitly approves it.
+
+## 13.3 Local Development
+
+Local development may use a local PostgreSQL instance/container for isolated development and automated tests. Deployed environments use Supabase PostgreSQL. The application code must not assume that the database provider is the business-logic layer.
+
+## 13.4 Upgrade Path
+
+The architecture must remain portable at the application boundary. Business logic must not depend directly on Supabase-specific database APIs. Supabase is the current managed PostgreSQL provider; a future PostgreSQL provider can be adopted without rewriting the financial domain engine. Storage access should remain behind an application/service boundary so the provider can be changed later if required.
+
+## 13.5 Free-First Is Not Free-Forever
+
+The initial deployment targets free/low-cost tiers for development and early users. Production readiness must still account for database/storage quotas, backups, monitoring, rate limits, and service availability. Do not design product limits merely to force monetization. Technical provider quotas must be documented and monitored separately.

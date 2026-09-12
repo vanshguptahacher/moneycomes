@@ -21,6 +21,38 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Data import/export and database dumps (prevents data leaks)
+data/
+imports/
+exports/
+*.dump
+*.sql.gz
+*.backup
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.db
+
+# Uploads, receipts, and local storage
+uploads/
+storage/
+receipts/
+
+# Test coverage and reports
+coverage/
+.nyc_output/
+
+# IDE and editor settings
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Temporary and cache directories
+temp/
+tmp/
+.cache/
+
 # System
 .DS_Store
 Thumbs.db

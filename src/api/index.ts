@@ -1,4 +1,5 @@
 /**
- * Centralized API client.
+ * Centralized API client module.
  */
-export {};
+export * from "./client.js";
+export * from "./users.js";

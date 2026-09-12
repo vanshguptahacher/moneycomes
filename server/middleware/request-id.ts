@@ -21,7 +21,11 @@ export const requestId = () =>
   createMiddleware(async (c, next) => {
     const rawHeader = c.req.header("x-request-id");
     const isSafe = rawHeader && SAFE_REQUEST_ID_REGEX.test(rawHeader);
-    const id = isSafe ? rawHeader : randomUUID();
+    const id = isSafe
+      ? rawHeader
+      : typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : randomUUID();
 
     c.set("requestId", id);
     c.header("X-Request-Id", id);

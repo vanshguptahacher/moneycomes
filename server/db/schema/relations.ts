@@ -1,11 +1,13 @@
 import { relations } from "drizzle-orm";
 import { activityEvents } from "./activity.js";
 import { accounts, sessions } from "./auth.js";
+import { attachments } from "./attachments.js";
 import { categories } from "./categories.js";
 import { currencies } from "./currencies.js";
 import { expenses, expenseSplits } from "./expenses.js";
 import { friendships } from "./friendships.js";
 import { groups, groupMembers } from "./groups.js";
+import { notifications } from "./notifications.js";
 import { settlements } from "./settlements.js";
 import { users } from "./users.js";
 
@@ -20,6 +22,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   friendshipsInitiated: many(friendships, { relationName: "friendshipsInitiated" }),
   friendshipsReceived: many(friendships, { relationName: "friendshipsReceived" }),
   activities: many(activityEvents),
+  receivedNotifications: many(notifications, { relationName: "recipientNotifications" }),
+  initiatedNotifications: many(notifications, { relationName: "actorNotifications" }),
+  uploadedAttachments: many(attachments),
   sessions: many(sessions),
   accounts: many(accounts),
 }));
@@ -111,6 +116,7 @@ export const expensesRelations = relations(expenses, ({ one, many }) => ({
     references: [currencies.code],
   }),
   splits: many(expenseSplits),
+  attachments: many(attachments),
 }));
 
 export const expenseSplitsRelations = relations(expenseSplits, ({ one }) => ({
@@ -159,3 +165,44 @@ export const activityEventsRelations = relations(activityEvents, ({ one }) => ({
     references: [groups.id],
   }),
 }));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  recipient: one(users, {
+    fields: [notifications.recipientId],
+    references: [users.id],
+    relationName: "recipientNotifications",
+  }),
+  actor: one(users, {
+    fields: [notifications.actorId],
+    references: [users.id],
+    relationName: "actorNotifications",
+  }),
+  group: one(groups, {
+    fields: [notifications.groupId],
+    references: [groups.id],
+  }),
+  expense: one(expenses, {
+    fields: [notifications.expenseId],
+    references: [expenses.id],
+  }),
+  settlement: one(settlements, {
+    fields: [notifications.settlementId],
+    references: [settlements.id],
+  }),
+  activity: one(activityEvents, {
+    fields: [notifications.activityId],
+    references: [activityEvents.id],
+  }),
+}));
+
+export const attachmentsRelations = relations(attachments, ({ one }) => ({
+  expense: one(expenses, {
+    fields: [attachments.expenseId],
+    references: [expenses.id],
+  }),
+  uploader: one(users, {
+    fields: [attachments.uploadedById],
+    references: [users.id],
+  }),
+}));
+

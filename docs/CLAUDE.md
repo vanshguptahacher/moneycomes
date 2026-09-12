@@ -1094,3 +1094,41 @@ over:
 > **Fast + clever + complicated**
 
 The app should eventually feel simple to the user because the engineering underneath it is disciplined—not because complexity was ignored.
+
+
+# Infrastructure & Hosting Baseline (Locked)
+
+The current deployment architecture is intentionally managed/free-first:
+
+```text
+Expo Android App
+      ↓ HTTPS
+Cloudflare Workers
+      ↓
+Hono API
+      ↓
+Drizzle ORM
+      ↓
+Supabase PostgreSQL
+
+Hono API → Supabase Storage
+Hono API → Better Auth
+```
+
+## Mandatory infrastructure rules
+
+- The mobile application must never connect directly to PostgreSQL.
+- Hono is the application's API/security boundary.
+- Better Auth remains the authentication system; do not add Supabase Auth unless explicitly approved.
+- Supabase PostgreSQL is the deployed authoritative relational database.
+- Supabase Storage is the current receipt/attachment object-storage provider.
+- Privileged Supabase credentials must remain server-side and must never be shipped in the mobile application.
+- Cloudflare Workers is the current backend hosting target; do not add Oracle VM hosting merely because it appeared in older documentation.
+- Local PostgreSQL may be used for development/test environments.
+- Do not introduce a second production database or storage provider without an explicit architecture decision.
+- Keep provider-specific code behind clear infrastructure boundaries where practical so future migration remains possible.
+- Free-tier limits must never be treated as permanent production guarantees. Production hardening must include monitoring, backup/recovery planning, and an upgrade path.
+
+## Existing Phase 4 implementation rule
+
+Infrastructure alignment must not trigger an unnecessary rewrite of already completed Phase 4.1–4.3 API/auth/user work. Preserve working domain logic, routes, authorization, and tests; make only the provider/configuration changes required to connect the existing backend to the approved infrastructure.

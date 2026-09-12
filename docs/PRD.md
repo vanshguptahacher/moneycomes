@@ -1393,7 +1393,38 @@ No development process can guarantee that every future third-party native module
 
 # 35. Data and Backend Product Requirements
 
-The backend implementation may use the selected free-first production stack, but the product contract is independent of a specific provider.
+The backend implementation may use the selected free-first production stack, but the product contract remains independent of a specific provider.
+
+### 35.1 Current deployment baseline
+
+Phase 1 uses the following provider-backed deployment baseline:
+
+```text
+Expo Android App
+      ↓ HTTPS
+Cloudflare Workers
+      ↓
+Hono API
+      ↓
+Drizzle ORM
+      ↓
+Supabase PostgreSQL
+
+Hono API → Supabase Storage
+Hono API → Better Auth
+```
+
+Product-level implications:
+
+- The mobile app communicates with the backend through the API and must never connect directly to PostgreSQL.
+- The backend is the security and authorization boundary for protected product data.
+- Supabase PostgreSQL is the authoritative relational data store for the deployed environment.
+- Supabase Storage is the current storage boundary for receipts/attachments.
+- Better Auth remains the authentication system; Supabase Auth is not required for Phase 1.
+- Free-tier quotas are operational constraints and must not be turned into artificial product limits such as daily expense caps.
+- The deployment should remain replaceable through clear service boundaries so the product is not permanently coupled to one provider.
+
+This deployment choice is intentionally kept concise in the PRD. Detailed infrastructure, environment, migration, and operational rules belong in the technical architecture and security documents.
 
 The backend must provide authoritative persistence for:
 

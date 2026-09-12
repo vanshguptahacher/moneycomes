@@ -116,6 +116,33 @@ Implement
 
 ## 1.2 PostgreSQL/Drizzle
 
+**Production infrastructure baseline (locked):**
+
+```text
+Expo Android App
+      ↓ HTTPS
+Cloudflare Workers
+      ↓
+Hono API
+      ↓
+Drizzle ORM
+      ↓
+Supabase PostgreSQL
+
+Hono API → Supabase Storage
+Hono API → Better Auth
+```
+
+- [x] Production database provider is Supabase PostgreSQL.
+- [x] Production API host is Cloudflare Workers running Hono.
+- [x] Production attachment storage is Supabase Storage.
+- [x] Better Auth remains the single authentication system.
+- [x] Mobile client never connects directly to PostgreSQL or privileged storage.
+- [ ] Production environment variables/secrets configured only in the deployment platform.
+- [ ] Production migration process verified against Supabase PostgreSQL.
+- [ ] Production storage access verified as private and server-authorized.
+- [ ] Cloudflare Worker health/readiness smoke checks verified.
+
 - [x] Database connection. (`server/db/client.ts` with connection pooling)
 - [x] Drizzle configuration. (`drizzle.config.ts`, `server/db/schema/*`)
 - [x] Migration configuration. (`drizzle-kit generate`, `drizzle/migrations/0000_spotty_rockslide.sql`)
@@ -300,170 +327,191 @@ Implement
 
 ## 2.4 Percentage split
 
-- [ ] Percentage validation.
-- [ ] Precision rules.
-- [ ] Allocation calculation.
-- [ ] Rounding reconciliation.
+- [x] Percentage validation. (`PercentageTotalError`, `NegativePercentageError`, `InvalidPercentageError`, `EmptyParticipantsError`, `DuplicateParticipantError`, `InvalidParticipantError`)
+- [x] Precision rules. (Basis points model: 10000 bps = 100.00%, max 2 decimal places, exact integer arithmetic)
+- [x] Allocation calculation. (Deterministic `BigInt` multiplication avoids safe integer overflow; `floor` base allocation)
+- [x] Rounding reconciliation. (Largest Remainder Method distributes shortfall to participants by descending remainder with input-order tie-break)
 
 ### Tests
-- [ ] 50/50.
-- [ ] 33.33/33.33/33.34.
-- [ ] 100%.
-- [ ] 99%.
-- [ ] 101%.
-- [ ] Negative percentage.
-- [ ] Rounding edge cases.
+- [x] 50/50. (100 INR -> 50, 50)
+- [x] 33.33/33.33/33.34. (100 INR -> 33, 33, 34; 1000 INR -> 333, 333, 334)
+- [x] 100%. (single participant receiving whole total)
+- [x] 99%. (rejected with PercentageTotalError)
+- [x] 101%. (rejected with PercentageTotalError)
+- [x] Negative percentage. (rejected with NegativePercentageError)
+- [x] Rounding edge cases. (1 paise on 50/50, 1 paise on 33.33/33.33/33.34, odd totals, 7 asymmetric participants, tie breaking)
+
+### Gate
+- [x] Percentage split domain operational. (61 percentage split tests, 350 total tests, typecheck PASS, lint PASS)
 
 ## 2.5 Shares split
 
-- [ ] Share validation.
-- [ ] Proportional calculation.
-- [ ] Deterministic rounding.
+- [x] Share validation. (`NegativeShareError`, `InvalidShareError`, `ZeroTotalSharesError`, `EmptyParticipantsError`, `DuplicateParticipantError`, `InvalidParticipantError`, `NegativeSplitTotalError`)
+- [x] Proportional calculation. (Exact `BigInt` multiplication avoids safe integer overflow; `floor` base allocation by participant shares / totalShares)
+- [x] Deterministic rounding. (Largest Remainder Method distributes shortfall by descending remainder with input-order tie-break; zero-share participants receive exactly 0 and no remainder)
 
 ### Tests
-- [ ] 1:1.
-- [ ] 1:2.
-- [ ] 1:2:3.
-- [ ] Large shares.
-- [ ] Zero share.
-- [ ] Negative share.
+- [x] 1:1. (100 INR -> 50, 50)
+- [x] 1:2. (300 INR -> 100, 200; 100 INR -> 33, 67)
+- [x] 1:2:3. (600 INR -> 100, 200, 300)
+- [x] Large shares. (1,000,000 shares each; MAX_SAFE_INTEGER total)
+- [x] Zero share. (Individual 0 shares receives 0 minor units, no remainder; all-zero rejected with ZeroTotalSharesError)
+- [x] Negative share. (Rejected with NegativeShareError)
+
+### Gate
+- [x] Shares split domain operational. (47 shares split tests, 397 total tests, typecheck PASS, lint PASS)
 
 ## 2.6 Balance engine
 
-- [ ] Payer contribution.
-- [ ] Participant obligation.
-- [ ] Per-user net balance.
-- [ ] Balance direction convention.
+- [x] Payer contribution. (Full total attributed to payer; `paid = (user === payer) ? total : zero`)
+- [x] Participant obligation. (Consumes validated split allocations directly; `owed = alloc.amount`)
+- [x] Per-user net balance. (`netBalance = subtract(paid, owed)`; positive = to receive, negative = owes, zero = settled)
+- [x] Balance direction convention. (Consistent positive/negative/zero direction convention documented and verified)
 
 ### Tests
-- [ ] Payer is participant.
-- [ ] Payer not participant where supported.
-- [ ] Equal split.
-- [ ] Exact split.
-- [ ] Rounding.
+- [x] Payer is participant. (Expense = 100, A pays 100, A owes 50, B owes 50 -> A +50, B -50; solo expense A owes 100 -> A 0)
+- [x] Payer not participant where supported. (Alice pays 100, Bob owes 50, Charlie owes 50 -> Alice +100, Bob -50, Charlie -50)
+- [x] Equal split. (Integration consuming `splitEqually` allocations)
+- [x] Exact split. (Integration consuming `splitExactly` allocations)
+- [x] Rounding. (Integration consuming `splitByPercentage` and `splitByShares` allocations with remainder reconciliation)
+
+### Gate
+- [x] Balance engine domain operational. (40 balance tests, 437 total tests, typecheck PASS, lint PASS)
 
 ## 2.7 Group balance
 
-- [ ] Aggregate expenses.
-- [ ] Aggregate settlements.
-- [ ] Calculate per-user position.
-- [ ] Reconciliation.
+- [x] Aggregate expenses. (`calculateGroupBalances` aggregates each member's `paid` and `owed` across all validated expenses)
+- [x] Aggregate settlements. (Supported via `GroupSettlementInput`; payer pays down debt, receiver collects credit)
+- [x] Calculate per-user position. (`netBalance = paid - owed`; preserves zero balances for all group members)
+- [x] Reconciliation. (Guarantees `sum(all user net balances) === 0`; validated with `BalanceReconciliationError`)
 
 ### Tests
-- [ ] One expense.
-- [ ] Multiple expenses.
-- [ ] Multiple participants.
-- [ ] Expense + settlement.
-- [ ] Fully settled group.
+- [x] One expense. (Single expense aggregation in group context)
+- [x] Multiple expenses. (Required Step 10 example: Exp 1 A +50, B -50; Exp 2 B +30, C -30 -> A +50, B -20, C -30)
+- [x] Multiple participants. (4-person group with diverse payers and unequal split methods)
+- [x] Expense + settlement. (Expense + partial and full settlement aggregation)
+- [x] Fully settled group. (Settlements and counter-expenses bringing all users to exact 0 balance)
+
+### Gate
+- [x] Group balance domain operational. (27 group balance tests, 464 total tests, typecheck PASS, lint PASS)
 
 ## 2.8 Debt simplification
 
-- [ ] Identify debtors.
-- [ ] Identify creditors.
-- [ ] Match obligations.
-- [ ] Produce simplified transfers.
-- [ ] Preserve net position.
-- [ ] Deterministic ordering.
+- [x] Identify debtors. (Negative balance users with `debtAmount = abs(netBalance)`)
+- [x] Identify creditors. (Positive balance users with `creditAmount = netBalance`)
+- [x] Match obligations. (Greedy matching: `transferAmount = min(debt.remaining, credit.remaining)`)
+- [x] Produce simplified transfers. (`SimplifiedTransfer` with debtor, creditor, exact positive amount)
+- [x] Preserve net position. (Mathematical invariant: applying transfers reduces all net positions to exact 0)
+- [x] Deterministic ordering. (Descending by amount, tie-break by input order; pure deterministic matching)
 
 ### Tests
-- [ ] Two people.
-- [ ] Three-person chain.
-- [ ] Multiple debtors.
-- [ ] Multiple creditors.
-- [ ] Already-settled state.
-- [ ] Rounding.
+- [x] Two people. (A +50, B -50 -> B pays A 50)
+- [x] Three-person chain. (A owes B 500, B owes C 500 -> A pays C 500)
+- [x] Multiple debtors. (A +50, B -30, C -20 -> B pays A 30, C pays A 20; A +70, B -40, C -30 -> B pays A 40, C pays A 30)
+- [x] Multiple creditors. (A +30, B +20, C -50 -> C pays A 30, C pays B 20; A +60, B +40, C -70, D -30)
+- [x] Already-settled state. (All zero balances -> 0 transfers, transferCount 0)
+- [x] Rounding. (Exact minor units arithmetic, no floating-point; MAX_SAFE_INTEGER test; 1 paise test)
+
+### Gate
+- [x] Debt simplification domain operational. (27 simplification tests, 491 total tests, typecheck PASS, lint PASS)
 
 ## 2.9 Settlement engine
 
-- [ ] Settlement model.
-- [ ] Debtor/creditor validation.
-- [ ] Amount validation.
-- [ ] Balance effect.
-- [ ] Recalculation.
+- [x] Settlement model. (`src/domain/money/settlement.ts` — strongly typed immutable Settlement with debtor/creditor/payer/receiver aliases and optional metadata)
+- [x] Debtor/creditor validation. (`SelfSettlementError`, `DebtorCreditorMismatchError`, `UnknownGroupMemberError`, `InvalidSettlementPartiesError` — no self-settlements, no silent swaps)
+- [x] Amount validation. (`InvalidSettlementAmountError`, `OverSettlementError`, `CurrencyMismatchError` — positive safe integer, debt ceiling enforced, no silent clamping)
+- [x] Balance effect. (`applySettlement`, `applySettlements` — debtor balance increases toward zero, creditor balance decreases toward zero, zero-sum preserved)
+- [x] Recalculation. (`recalculateBalances` — pure deterministic calculation deriving authoritative balances from expenses + settlements)
 
 ### Tests
-- [ ] Full settlement.
-- [ ] Partial settlement.
-- [ ] Invalid amount.
-- [ ] Duplicate request.
-- [ ] Settlement + later expense.
+- [x] Full settlement. (A = +100, B = -100; B pays A 100 -> A = 0, B = 0 with exact zero minor units)
+- [x] Partial settlement. (A = +100, B = -100; B pays A 40 -> A = +60, B = -60; successive partial settlements)
+- [x] Invalid amount. (Zero, negative, float/NaN, and over-settlement rejection)
+- [x] Duplicate request. (Duplicate settlement ID rejection, over-settlement rejection on repeated applications)
+- [x] Settlement + later expense. (Recalculation integrating multiple expenses and sequential settlements)
+
+### Gate
+- [x] Settlement engine operational. (39 settlement tests, 443 total financial domain tests, 530 full test suite PASS, typecheck PASS, lint PASS)
 
 ## 2.10 Financial regression
 
-- [ ] Combine expenses/splits/settlements.
-- [ ] Test large values.
-- [ ] Test many participants.
-- [ ] Test retry scenarios.
-- [ ] Test deterministic outputs.
+- [x] Combine expenses/splits/settlements. (`tests/unit/domain-financial-regression.test.ts` — lifecycle tests connecting splits, expenses, balances, debt simplification, settlements, recalculation)
+- [x] Test large values. (Verified with 1 trillion minor units / ₹10 billion without precision loss or overflow)
+- [x] Test many participants. (Verified 50 participants with equal split and 25 participants with shares split)
+- [x] Test retry scenarios. (Verified 20 repeated runs producing bit-for-bit identical outputs without mutation)
+- [x] Test deterministic outputs. (Validated deterministic sorting, remainder distribution, and transfer matching)
 
 ### Gate
-- [ ] All financial tests PASS.
-- [ ] All financial invariants PASS.
+- [x] All financial tests PASS. (481 financial tests across 10 suites, 568 total test suite PASS, typecheck PASS, lint PASS)
+- [x] All financial invariants PASS. (Explicitly verified all 14 foundational financial invariants)
 
 ---
 
 # PHASE 3 — Database Schema
 
 ## 3.1 Identity
-- [ ] Users/profile.
-- [ ] IDs/timestamps.
-- [ ] Required constraints.
-
-## 3.2 Friends
-- [ ] Friendship relation.
-- [ ] Status.
-- [ ] Duplicate prevention.
-- [ ] Indexes.
-
-## 3.3 Groups
-- [ ] Groups.
-- [ ] Creator/owner.
-- [ ] Group settings.
-
-## 3.4 Group members
-- [ ] Membership.
-- [ ] Role if required.
-- [ ] Duplicate prevention.
-- [ ] Constraints.
-
-## 3.5 Expenses
-- [ ] Expense.
-- [ ] Minor-unit amount.
-- [ ] Currency.
-- [ ] Payer.
-- [ ] Group/friend context.
-- [ ] Description/date/category.
-
-## 3.6 Participants/allocations
-- [ ] Participants.
-- [ ] Split allocations.
-- [ ] Constraints.
-
-## 3.7 Settlements
-- [ ] Settlement records.
-- [ ] Amount/currency.
-- [ ] Payer/payee.
-- [ ] Idempotency reference where required.
-
-## 3.8 Activity
-- [ ] Activity events.
-- [ ] Safe metadata.
-
-## 3.9 Notifications
-- [ ] Notification model if required.
-- [ ] Read/unread state.
-
-## 3.10 Attachments
-- [ ] Attachment metadata only if in current scope.
-- [ ] Parent resource.
-- [ ] Storage reference.
+- [x] Users/profile. (`server/db/schema/users.ts` — Better Auth canonical users table serves as application identity & profile with name, email, emailVerified, image, defaultCurrencyCode; verified no redundant profile entity needed)
+- [x] IDs/timestamps. (Stable opaque text ID primary key; database-default createdAt and updatedAt timestamps with timezone)
+- [x] Required constraints. (Unique email constraint, email index, not-null constraints, strict ON DELETE restrict on financial tables to prevent cascading loss, clean credential segregation in accounts/sessions/verifications)
 
 ### Gate
-- [ ] Fresh database migration succeeds.
-- [ ] Foreign keys work.
-- [ ] Uniqueness constraints work.
-- [ ] Important indexes exist.
-- [ ] No sensitive fields are unnecessarily exposed.
+- [x] Identity schema operational and verified. (21 identity schema tests, 589 total test suite PASS, typecheck PASS, lint PASS, migration check PASS)
+
+## 3.2 Friends
+- [x] Friendship relation. (`server/db/schema/friendships.ts` — Bidirectional relation between canonical users `userId1` and `userId2` referencing `users.id` with `onDelete: "cascade"`, separate from financial tables)
+- [x] Status. (`status varchar(32) NOT NULL DEFAULT 'active'`, strongly typed `FriendshipStatus` domain model)
+- [x] Duplicate prevention. (Lexicographic ordering check constraint `CHECK (user_id_1 < user_id_2)` strictly preventing self-friendship and reverse duplicates `(B, A)`; unique constraint `UNIQUE (user_id_1, user_id_2)` preventing forward duplicates; deterministic `canonicalizeFriendshipPair` helper)
+- [x] Indexes. (`friendships_user1_idx` on `user_id_1`, `friendships_user2_idx` on `user_id_2`, plus backing unique index on composite `(user_id_1, user_id_2)`)
+
+## 3.3 Groups
+- [x] Groups. (`server/db/schema/groups.ts` — `groups` table with UUID PK, name, description, default currency code referencing currencies.code, createdById referencing users.id with `ON DELETE restrict`, isArchived setting, timestamps with timezone)
+- [x] Creator/owner. (`createdById` references canonical Better Auth `users.id` of type `text` with `ON DELETE restrict` to protect group history from accidental user deletion)
+- [x] Group settings. (`isArchived` boolean setting with default false, `defaultCurrencyCode` with default 'INR', `description` text; zero embedded member arrays or financial calculations)
+
+## 3.4 Group members
+- [x] Membership. (`server/db/schema/groups.ts` — `group_members` normalized many-to-many join table connecting canonical `groups.id` [uuid] and `users.id` [text], joinedAt timestamp with timezone, zero embedded arrays in groups)
+- [x] Role if required. (`role varchar(32) NOT NULL DEFAULT 'member'`, strongly typed `GROUP_ROLES` domain constant for member and admin roles)
+- [x] Duplicate prevention. (Database-enforced composite unique constraint `group_members_group_user_uq` on `(group_id, user_id)`, preventing duplicate active memberships and concurrent race conditions; `validateGroupMembershipInput` helper)
+- [x] Constraints. (UUID PK, foreign keys referencing `groups.id` and `users.id` with `ON DELETE cascade` on group/user cleanup; zero financial tables reference `group_members`, ensuring complete lifecycle decoupling from historical expenses/settlements; indexes on `group_id` and `user_id`)
+
+## 3.5 Expenses
+- [x] Expense. (`server/db/schema/expenses.ts` — `expenses` table with UUID PK, createdById & payerId referencing canonical users.id with `ON DELETE restrict`, splitMethod with strongly typed `SPLIT_METHODS`, isDeleted soft-delete flag, notes, receiptUrl, audit timestamps)
+- [x] Minor-unit amount. (`amount_minor bigint NOT NULL` with check constraint `CHECK (amount_minor > 0)` strictly enforcing positive integer minor units with 0 floating-point)
+- [x] Currency. (`currency_code varchar(3) NOT NULL` referencing `currencies.code`, preserving original currency with zero implicit conversions)
+- [x] Payer. (`payer_id text NOT NULL` referencing `users.id` with `ON DELETE restrict`, preventing deletion of users with financial transaction history)
+- [x] Group/friend context. (`group_id uuid` referencing `groups.id` with `ON DELETE cascade`; nullable to cleanly support person-to-person expenses without artificial groups)
+- [x] Description/date/category. (`description varchar(255) NOT NULL`, `date timestamp with time zone DEFAULT now() NOT NULL` for financial event occurrence time, `category_id uuid` referencing `categories.id` with `ON DELETE set null`; zero embedded participants or derived balances)
+
+## 3.6 Participants/allocations
+- [x] Participants. (`server/db/schema/expenses.ts` — `expense_splits` table connects canonical `users.id` [text] and `expenses.id` [uuid], ensuring participants are stable canonical user records with zero duplicated profile or user metadata)
+- [x] Split allocations. (`allocated_amount_minor bigint NOT NULL` storing exact integer minor units with `CHECK (allocated_amount_minor >= 0)`, inheriting currency authoritatively from parent `expenses.currency_code`; split calculation metadata `percentage_basis_points` and `shares` safely stored; zero floating-point arithmetic or silent rounding)
+- [x] Constraints. (Composite uniqueness `UNIQUE (expense_id, user_id)` preventing duplicate participant allocations per expense; foreign keys referencing `expenses.id` with `ON DELETE cascade` and `users.id` with `ON DELETE restrict` to protect financial history; indexes on `expense_id` and `user_id`; pure `validateExpenseSplitInput` helper)
+
+## 3.7 Settlements
+- [x] Settlement records. (`server/db/schema/settlements.ts` — `settlements` table with UUID PK, createdById referencing users.id with `ON DELETE restrict`, groupId referencing groups.id with `ON DELETE cascade` [nullable to support 1-on-1 personal settlements], settledAt & createdAt audit timestamps, notes; zero stored balances or simplified debts)
+- [x] Amount/currency. (`amount_minor bigint NOT NULL` with `CHECK (amount_minor > 0)` strictly enforcing positive safe integer minor units with 0 floating-point; `currency_code varchar(3) NOT NULL` referencing `currencies.code` preserving original currency with zero implicit conversions)
+- [x] Payer/payee. (`payer_id text NOT NULL` and `receiver_id text NOT NULL` referencing canonical `users.id` with `ON DELETE restrict`; check constraint `CHECK (payer_id != receiver_id)` strictly forbidding self-settlement)
+- [x] Idempotency reference where required. (Settlement `id` [UUID PK] serves as authoritative unique/idempotency key preventing duplicate settlements in batches/recalculations; boundary `validateSettlementInput` helper validates IDs and enforces positive safe integers)
+
+## 3.8 Activity
+- [x] Activity events. (`server/db/schema/activity.ts` — `activity_events` table with UUID PK, actorId referencing users.id with `ON DELETE restrict`, groupId referencing groups.id with `ON DELETE cascade` [nullable for personal/friend activity], entityType & entityId polymorphic reference, strongly typed `ACTIVITY_EVENT_TYPES` and `ACTIVITY_ENTITY_TYPES`, server-authoritative createdAt timestamp; zero stored balances or mutable edit fields)
+- [x] Safe metadata. (`metadata jsonb NOT NULL DEFAULT '{}'::jsonb`, `ActivityMetadata` interface for display/event context, boundary `validateActivityEventInput` with active security filter strictly rejecting authentication secrets and credentials [password, tokens, secrets, api keys])
+
+## 3.9 Notifications
+- [x] Notification model if required. (`server/db/schema/notifications.ts` — `notifications` table with UUID PK, recipientId referencing users.id with `ON DELETE cascade`, actorId referencing users.id with `ON DELETE set null`, nullable foreign keys to groups, expenses, settlements, and activityEvents with `ON DELETE set null`, strongly typed `NOTIFICATION_TYPES`, title & message, safe metadata, server-authoritative createdAt timestamp; migration `0002_fluffy_ezekiel.sql`)
+- [x] Read/unread state. (`read_at timestamp with time zone` nullable field where NULL represents unread and non-null timestamp represents read state; composite indexes `(recipient_id, created_at)` and `(recipient_id, read_at)` for instant feed pagination and unread counts)
+
+## 3.10 Attachments
+- [x] Attachment metadata only if in current scope. (`server/db/schema/attachments.ts` — `attachments` table with UUID PK, originalFileName varchar(255), mimeType varchar(127), fileSizeBytes bigint mode number with check constraint `CHECK (file_size_bytes >= 0)`, createdAt timestamp with timezone; zero raw binary/BYTEA/base64 data stored in PostgreSQL)
+- [x] Parent resource. (`expense_id uuid NOT NULL` referencing `expenses.id` with `ON DELETE cascade`; supports 1:N multiple attachments per expense; Drizzle relations wired)
+- [x] Storage reference. (`storage_key varchar(512) NOT NULL` storing opaque private Supabase Storage object reference with unique constraint `attachments_storage_key_uq`; `uploaded_by_id text NOT NULL` referencing `users.id` with `ON DELETE restrict` to preserve financial audit trail; composite index on `(expense_id, created_at)` and index on `uploaded_by_id`; pure `validateAttachmentInput` boundary helper)
+
+### Gate
+- [x] Fresh database migration succeeds. (Generated `0003_rapid_sheva_callister.sql`; verified via `drizzle-kit check`)
+- [x] Foreign keys work. (Verified `expense_id -> expenses.id [ON DELETE cascade]`, `uploaded_by_id -> users.id [ON DELETE restrict]`, `group_id`, `payer_id`, `created_by_id`, `user_id_1`, `user_id_2`)
+- [x] Uniqueness constraints work. (Verified `storage_key` unique, `(expense_id, user_id)` unique, `(user_id_1, user_id_2)` unique, `email` unique)
+- [x] Important indexes exist. (Verified composite `(expense_id, created_at)`, `uploaded_by_id`, `(recipient_id, created_at)`, `(recipient_id, read_at)`, `group_id`, `payer_id`, `date`, `user_id`)
+- [x] No sensitive fields are unnecessarily exposed. (No passwords, tokens, API keys, or raw binary file blobs stored; verified financial calculations isolated)
 
 ---
 
@@ -485,20 +533,68 @@ Route
 → Tests
 ```
 
-## 4.1 Users
-- [ ] Get current user.
-- [ ] Update allowed profile fields.
-- [ ] Validation.
-- [ ] Authorization tests.
+## 4.1 Backend/API Foundation & Server Architecture
 
-## 4.2 Friends
+- [x] Hono application entry point & lifecycle. (`server/app.ts` with typed Hono app, `/health`, `/api/auth/*`, `/api/v1` route namespaces, standard ES module export for Cloudflare Workers; verified via live request and unit tests)
+- [x] Route mounting architecture. (`server/routes/index.ts` mounting modular subrouters under `/api/v1` for future domain resources)
+- [x] Health & readiness probes. (`/health` process liveness with edge-safe uptime, `/health/ready` DB readiness probe via `checkDatabaseConnection()`; verified zero secret or credential leakage)
+- [x] Database client & transaction boundary. (`server/db/client.ts` pool singleton, Drizzle client, `DbOrTx` transaction support for atomic mutations)
+- [x] Environment validation & production hardening. (`server/config/index.ts` with Zod validation, production fail-fast rules, credential masking)
+- [x] Standardized error & response envelopes. (`server/utils/response.ts` with `sendSuccess` and `sendError`; standard `{ error: { code, message, requestId, details } }` and `{ data, meta: { requestId } }`)
+- [x] AppError hierarchy & central error mapping. (`server/errors/index.ts` and `server/middleware/error-handler.ts` mapping `AppError` subclasses to 400, 401, 403, 404, 409, 500)
+- [x] Request validation middleware. (`server/middleware/validator.ts` for JSON body, query parameters, path parameters with structured field errors)
+- [x] Authentication & authorization boundary. (`server/middleware/auth.ts` with `requireAuth()`, server-authoritative identity; verified spoofed `X-User-Id` headers rejected)
+- [x] Financial domain boundary & money safety. (Strict decoupling between HTTP routing and financial domain logic; all calculations use integer minor units and deterministic arithmetic in `src/domain/`; route handlers never calculate splits or balances directly)
+- [x] Security hardening & limits. (`server/middleware/request-id.ts` with injection-prevention sanitization regex, `structuredLogger` without secrets, `secureHeaders`, CORS credentials, 1MB body limit)
+
+### Tests
+- [x] Hono application boot and predictable route mounting.
+- [x] Liveness and readiness probe status without credential leakage.
+- [x] Request ID generation, preservation, and injection-prevention sanitization.
+- [x] Security headers and 1MB request body limit enforcement.
+- [x] Request validation with Zod (JSON body, query parameters, path parameters).
+- [x] Standardized response envelopes and AppError status mapping.
+- [x] Protected route unauthenticated rejection and server-side identity resolution.
+- [x] Spoofed client user ID header rejection.
+- [x] Financial domain engine isolation and integer minor-unit arithmetic invariant.
+- [x] Database connection pool singleton and `DbOrTx` transaction type contract.
+
+### Gate
+- [x] Backend/API foundation and server architecture operational. (Verified via 22 Phase 4.1 unit tests in `tests/unit/backend-auth-phase4.test.ts`, 14 baseline auth tests, 964 total test suite PASS, typecheck PASS, lint PASS, Drizzle schema consistency PASS)
+
+## 4.2 Users & Profile API
+
+- [x] Current authenticated user profile retrieval. (`GET /api/v1/users/me` returning safe profile shape from session identity)
+- [x] Current user profile update. (`PATCH /api/v1/users/me` with strict Zod validation for allowed fields: `name`, `image`, `defaultCurrencyCode`)
+- [x] Protected profile by ID with strict authorization. (`GET /api/v1/users/:id` and `PATCH /api/v1/users/:id` enforcing actor ownership)
+- [x] IDOR protection & authorization boundary. (Cross-user profile reading and mutation strictly rejected with 403 Forbidden in `UserService`)
+- [x] Immutable identity protection. (Strict rejection of `id`, `email`, `emailVerified`, `password`, `createdAt` modification attempts)
+- [x] Zero-trust identity derivation. (Derives user identity strictly from Better Auth session context, ignoring client headers or query params)
+- [x] Safe serialization & privacy. (`formatSafeUserProfile` guarantees zero password hashes, auth secrets, or database URLs leak in responses)
+- [x] Mobile API client abstraction. (`src/api/client.ts` and `src/api/users.ts` with typed `getCurrentUserProfile`, `updateCurrentUserProfile`, `getUserProfileById`)
+
+### Tests
+- [x] Authenticated user can retrieve own profile.
+- [x] Unauthenticated request rejected with HTTP 401 Unauthorized.
+- [x] Authenticated user can update allowed profile fields (`name`, `image`, `defaultCurrencyCode`).
+- [x] Invalid profile input rejected with HTTP 400 Validation Error (empty name, bad currency, malformed JSON).
+- [x] Protected/immutable fields cannot be modified (`id`, `email`, `password`).
+- [x] Strict IDOR protection: User A cannot read or modify User B's profile (HTTP 403 Forbidden).
+- [x] User identity derived strictly from session context, ignoring client headers and query params.
+- [x] Response does not expose private authentication internals or credentials.
+- [x] Mobile API client functions correctly invoke endpoints with credentials and handle errors.
+
+### Gate
+- [x] Users & Profile API operational. (Verified via 18 Phase 4.2 unit tests in `tests/unit/backend-users-phase4.test.ts`, 22 Phase 4.1 auth tests, 982 total test suite PASS, typecheck PASS, lint PASS, Drizzle schema consistency PASS)
+
+## 4.3 Friends
 - [ ] Search permitted users.
 - [ ] Create relationship.
 - [ ] Remove if supported.
 - [ ] Bilateral balance.
 - [ ] Authorization tests.
 
-## 4.3 Groups
+## 4.4 Groups
 - [ ] Create.
 - [ ] List.
 - [ ] Get.
@@ -513,7 +609,7 @@ Tests:
 - [ ] Duplicate member.
 - [ ] Unauthorized modification.
 
-## 4.4 Expenses
+## 4.5 Expenses
 - [ ] Create.
 - [ ] Get.
 - [ ] Edit.
@@ -533,13 +629,13 @@ Tests:
 - [ ] Duplicate request.
 - [ ] Rollback.
 
-## 4.5 Balances
+## 4.6 Balances
 - [ ] Personal balance.
 - [ ] Friend balance.
 - [ ] Group balance.
 - [ ] Simplified debts.
 
-## 4.6 Settlements
+## 4.7 Settlements
 - [ ] Create.
 - [ ] Get.
 - [ ] List.
@@ -547,12 +643,17 @@ Tests:
 - [ ] Transaction.
 - [ ] Idempotency.
 
-## 4.7 Activity
+## 4.8 Activity
 - [ ] List.
 - [ ] Scope correctly.
 - [ ] Pagination.
 
-## 4.8 Uploads
+## 4.9 Notifications
+- [ ] List.
+- [ ] Mark as read.
+- [ ] Unread count.
+
+## 4.10 Uploads / Attachments
 Only if currently required.
 
 - [ ] Authenticate.
@@ -1049,27 +1150,56 @@ Only begin deep visual refinement after core functionality is stable.
 
 # PHASE 21 — Production Observability
 
-- [ ] Configure production error monitoring.
+- [ ] Configure production error monitoring compatible with Cloudflare Workers.
 - [ ] Remove sensitive data from reports.
 - [ ] Add release/version metadata.
 - [ ] Structured server logs.
 - [ ] Request IDs.
-- [ ] API/database health checks.
+- [ ] Cloudflare Worker/API health checks.
+- [ ] Supabase PostgreSQL readiness/connection checks.
 - [ ] Safe production error responses.
+- [ ] Verify logs do not expose Better Auth secrets, database credentials, storage credentials, or financial-sensitive payloads.
 
 ---
 
 # PHASE 22 — Backup & Recovery
 
-- [ ] Define database backup procedure.
-- [ ] Test restoration.
-- [ ] Document migration recovery.
+- [ ] Define the Supabase PostgreSQL backup procedure appropriate for the production tier.
+- [ ] Test restoration to a separate PostgreSQL environment.
+- [ ] Document migration recovery and rollback strategy.
 - [ ] Document production incident recovery.
-- [ ] Verify required file/receipt recovery.
+- [ ] Verify required Supabase Storage file/receipt recovery.
+- [ ] Document provider-quota/availability recovery procedures.
 
 ---
 
-# PHASE 23 — Android Release Candidate
+# PHASE 23 — Production Deployment & Android Release Candidate
+
+## 23.0 Production deployment
+
+- [ ] Configure Cloudflare Worker production environment.
+- [ ] Configure production secrets/variables without committing them to source control.
+- [ ] Configure Supabase PostgreSQL production connection.
+- [ ] Run and verify Drizzle migrations against the production database.
+- [ ] Configure Supabase Storage bucket/access policy for private attachments.
+- [ ] Verify Better Auth production URL/origin/cookie configuration.
+- [ ] Verify CORS allows only approved production app/API origins.
+- [ ] Deploy Hono API to Cloudflare Workers.
+- [ ] Verify `/health` and readiness checks.
+- [ ] Run authenticated API smoke tests.
+- [ ] Verify an expense mutation is persisted correctly and remains server-authoritative.
+- [ ] Verify attachment upload/access authorization.
+- [ ] Verify production logs and error handling do not leak secrets or sensitive financial data.
+- [ ] Record deployed versions/configuration and rollback procedure.
+
+### Gate
+- [ ] Production API is reachable over HTTPS.
+- [ ] Supabase PostgreSQL migration state is correct.
+- [ ] Better Auth sign-in/session flow works in production.
+- [ ] Core financial mutation smoke test passes.
+- [ ] Storage authorization smoke test passes.
+- [ ] No direct mobile-to-PostgreSQL access exists.
+
 
 ## 23.1 Clean build
 

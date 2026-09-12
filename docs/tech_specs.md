@@ -136,12 +136,13 @@ The architecture must not become more complicated than the product requires.
 
 ## Infrastructure
 
-- Oracle Cloud Always Free
-- Ubuntu ARM VM
-- Docker
-- Docker Compose
-- Caddy
-- Oracle Object Storage
+- Cloudflare Workers — current production host for the Hono API
+- Supabase PostgreSQL — authoritative production relational database
+- Supabase Storage — current production attachment/object storage
+- Better Auth — authentication/session system, backed by PostgreSQL
+- Local PostgreSQL — development/test only where needed
+
+Provider boundaries are intentional: the mobile app never connects directly to PostgreSQL or storage. Database and privileged storage credentials remain server-side.
 
 ## Notifications
 
@@ -197,29 +198,24 @@ The architecture must not become more complicated than the product requires.
 └──────────────────────────────────────┘
 ```
 
-Infrastructure:
+Production infrastructure:
 
 ```text
-Internet
-   │
-   ▼
-Caddy / HTTPS
-   │
-   ▼
-Hono API container
-   │
-   ▼
-PostgreSQL container
-   │
-   └── persistent Docker volume
+Expo Android App
+      ↓ HTTPS
+Cloudflare Workers
+      ↓
+Hono API
+      ↓
+Drizzle ORM
+      ↓
+Supabase PostgreSQL
 
-Object Storage
-   ▲
-   │
-API-controlled uploads
+Hono API → Supabase Storage
+Hono API → Better Auth
 ```
 
-PostgreSQL must not be directly exposed to the public internet.
+PostgreSQL must not be accessed directly by the mobile app. Privileged database/storage credentials remain server-side.
 
 ---
 
@@ -287,7 +283,7 @@ Recommended structure:
 │   ├── integration/
 │   └── fixtures/
 │
-├── docker/
+├── docker/          # local/development container support only
 ├── docs/
 ├── CLAUDE.md
 ├── prd.md
@@ -1398,7 +1394,7 @@ SQLite may contain cached application data but must not be treated as the author
 
 # 41. File Storage
 
-Use Oracle Object Storage for persistent files.
+Use Supabase Storage for persistent attachments/files in the current production baseline.
 
 Flow:
 
@@ -1409,7 +1405,7 @@ Authenticated API
  ↓
 Authorization + validation
  ↓
-Object Storage
+Supabase Storage
  ↓
 Metadata persisted in PostgreSQL
 ```
@@ -1516,7 +1512,7 @@ Never commit:
 
 - database passwords,
 - Better Auth secrets,
-- Object Storage credentials,
+- Supabase Storage credentials,
 - API keys,
 - notification credentials,
 - payment credentials,
@@ -1534,89 +1530,78 @@ with placeholders only.
 
 ---
 
-# 46. Caddy & HTTPS
+# 46. Cloudflare Workers & HTTPS
 
-Caddy is the public HTTPS reverse proxy.
+Cloudflare Workers is the current production host for the Hono API. The API is reached by the mobile app over HTTPS.
 
 Conceptually:
 
 ```text
-Internet
+Expo Android App
  ↓
-443 HTTPS
+HTTPS
  ↓
-Caddy
+Cloudflare Workers
  ↓
 Hono API
 ```
 
-PostgreSQL must not be routed through Caddy or exposed publicly.
+Configure production environment variables/secrets through the deployment platform. Do not place privileged credentials in the mobile bundle.
 
 ---
 
-# 47. Docker Architecture
+# 47. Managed Database & Storage Architecture
 
-Recommended containers:
+Current production services:
 
 ```text
-caddy
-api
-postgres
+Hono API
+ ├── Drizzle ORM → Supabase PostgreSQL
+ ├── Better Auth → PostgreSQL-backed auth/session data
+ └── Supabase Storage → private attachments/files
 ```
 
-Additional containers should only be introduced when actually required.
+Supabase PostgreSQL is the authoritative relational database. Supabase Storage is the current attachment provider. The mobile app must never connect directly to either service for privileged operations.
 
-Use:
-
-- persistent PostgreSQL volume,
-- environment configuration,
-- restart policies,
-- health checks,
-- isolated network.
-
-Do not run production PostgreSQL without persistent storage.
+Local PostgreSQL may be used for development/test environments; it is not the required production database.
 
 ---
 
-# 48. Oracle Cloud Deployment
+# 48. Production Deployment
 
 Target architecture:
 
 ```text
-Oracle Cloud VM
- └── Ubuntu
-      └── Docker
-           ├── Caddy
-           ├── Hono API
-           └── PostgreSQL
+Expo Android App
+      ↓ HTTPS
+Cloudflare Workers
+      ↓
+Hono API
+      ↓
+Drizzle ORM
+      ↓
+Supabase PostgreSQL
+
+Hono API → Supabase Storage
+Hono API → Better Auth
 ```
 
-Object Storage is used separately for persistent object data/backups where appropriate.
+Deployment must be reproducible from documented configuration. Verify migrations, environment secrets, HTTPS/CORS, auth/session behavior, storage authorization, health checks, and financial smoke tests before release.
 
-Deployment should be reproducible from documented configuration.
+Do not introduce Oracle Cloud VM, self-hosted PostgreSQL, Caddy, or Oracle Object Storage into the current production path without an explicit architecture decision.
 
 ---
 
-# 49. Database Backups
+# 49. Database & Storage Recovery
 
-Backups must be:
+Recovery planning must cover the actual production providers:
 
-- automated,
-- retained,
-- protected,
-- tested.
+- Supabase PostgreSQL backup/recovery capabilities for the selected tier,
+- Supabase Storage object protection/recovery capabilities,
+- migration rollback/recovery procedures,
+- restore verification before production confidence.
 
-At minimum:
-
-```text
-PostgreSQL
- ↓
-Backup
- ↓
-Object Storage
-```
-
-Restore testing is mandatory before production confidence.
+Free-tier quotas and provider limitations are operational constraints, not artificial product limits.
 
 ---
 
@@ -2279,9 +2264,9 @@ Recommended technical order:
 16. Notifications/files
 17. Security hardening
 18. Testing/QA
-19. Docker
-20. Oracle deployment
-21. Backups
+19. Production infrastructure
+20. Managed database/storage deployment
+21. Backups/recovery
 22. CI/CD
 23. Beta
 24. Production

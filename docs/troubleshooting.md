@@ -407,6 +407,29 @@ Move expensive deterministic calculations to appropriate domain/service layers.
 
 # 22. Production API Failure
 
+Current production request path:
+
+```text
+Expo Android App
+→ HTTPS
+→ Cloudflare Workers
+→ Hono API
+→ Drizzle ORM
+→ Supabase PostgreSQL
+```
+
+Attachments use the Hono API with Supabase Storage, and authentication/session handling uses Better Auth backed by PostgreSQL. The mobile app must never connect directly to PostgreSQL or privileged storage APIs.
+
+When diagnosing a production API failure, first identify which boundary is failing:
+
+- Cloudflare Workers request/routing
+- Hono middleware or route handler
+- Better Auth/session handling
+- Drizzle/database access
+- Supabase PostgreSQL availability/schema/migrations
+- Supabase Storage authorization/upload
+- mobile network/API configuration
+
 Use request IDs to correlate:
 
 ```text
@@ -423,6 +446,14 @@ Show a useful recovery message.
 ---
 
 # 23. Upload Failure
+
+Current production storage path:
+
+```text
+Mobile
+→ Hono API
+→ Supabase Storage
+```
 
 Check:
 

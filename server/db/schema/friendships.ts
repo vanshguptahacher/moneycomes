@@ -24,5 +24,40 @@ export const friendships = pgTable(
   ]
 );
 
+export const FRIENDSHIP_STATUS = {
+  ACTIVE: "active",
+} as const;
+
+export type FriendshipStatus = (typeof FRIENDSHIP_STATUS)[keyof typeof FRIENDSHIP_STATUS];
+
+/**
+ * Returns the canonical ordering for a pair of user IDs in a friendship.
+ *
+ * Requirements:
+ * - Both user IDs must be provided and non-empty.
+ * - Self-friendship (userA === userB) is rejected.
+ * - Ensures userId1 < userId2 lexicographically to satisfy database check constraint
+ *   and prevent duplicate bidirectional entries.
+ */
+export function canonicalizeFriendshipPair(
+  userA: string,
+  userB: string
+): { userId1: string; userId2: string } {
+  if (!userA || !userB || typeof userA !== "string" || typeof userB !== "string") {
+    throw new Error("Both user IDs must be non-empty strings");
+  }
+  const trimmedA = userA.trim();
+  const trimmedB = userB.trim();
+  if (!trimmedA || !trimmedB) {
+    throw new Error("User IDs cannot be empty or whitespace");
+  }
+  if (trimmedA === trimmedB) {
+    throw new Error("Self-friendship is not permitted: user cannot befriend themselves");
+  }
+  return trimmedA < trimmedB
+    ? { userId1: trimmedA, userId2: trimmedB }
+    : { userId1: trimmedB, userId2: trimmedA };
+}
+
 export type Friendship = typeof friendships.$inferSelect;
 export type NewFriendship = typeof friendships.$inferInsert;

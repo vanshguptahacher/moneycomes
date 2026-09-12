@@ -62,7 +62,52 @@ export const expenseSplits = pgTable(
   ]
 );
 
+export const SPLIT_METHODS = {
+  EQUAL: "equal",
+  EXACT: "exact",
+  PERCENTAGE: "percentage",
+  SHARES: "shares",
+} as const;
+
+export type SplitMethod = (typeof SPLIT_METHODS)[keyof typeof SPLIT_METHODS];
+
+export function isSplitMethod(value: unknown): value is SplitMethod {
+  return typeof value === "string" && Object.values(SPLIT_METHODS).includes(value as SplitMethod);
+}
+
 export type Expense = typeof expenses.$inferSelect;
 export type NewExpense = typeof expenses.$inferInsert;
 export type ExpenseSplit = typeof expenseSplits.$inferSelect;
 export type NewExpenseSplit = typeof expenseSplits.$inferInsert;
+
+/**
+ * Validates an expense split allocation input at the boundary.
+ * Enforces non-empty IDs and non-negative safe integer minor units.
+ */
+export function validateExpenseSplitInput(
+  expenseId: string,
+  userId: string,
+  allocatedAmountMinor: number
+): { expenseId: string; userId: string; allocatedAmountMinor: number } {
+  if (!expenseId || typeof expenseId !== "string" || !expenseId.trim()) {
+    throw new Error("Valid expenseId is required for expense split");
+  }
+  if (!userId || typeof userId !== "string" || !userId.trim()) {
+    throw new Error("Valid userId is required for expense split");
+  }
+  if (
+    typeof allocatedAmountMinor !== "number" ||
+    !Number.isInteger(allocatedAmountMinor) ||
+    allocatedAmountMinor < 0 ||
+    allocatedAmountMinor > Number.MAX_SAFE_INTEGER
+  ) {
+    throw new Error(
+      "allocatedAmountMinor must be a non-negative safe integer representing minor currency units"
+    );
+  }
+  return {
+    expenseId: expenseId.trim(),
+    userId: userId.trim(),
+    allocatedAmountMinor,
+  };
+}
