@@ -274,17 +274,29 @@ Implement
 
 ## 2.3 Exact split
 
-- [ ] Exact allocation input.
-- [ ] Negative-value validation.
-- [ ] Total validation.
-- [ ] Allocation result.
+- [x] Exact allocation input. (`ExactAllocationInput` — `{ participantId, amount: Money }`)
+- [x] Negative-value validation. (`NegativeAllocationError` — rejected before reconciliation)
+- [x] Total validation. (`UnderAllocationError` / `OverAllocationError` — exact integer comparison, no silent adjustment)
+- [x] Currency validation. (`AllocationCurrencyMismatchError` — every allocation must match total currency)
+- [x] Allocation result. (`ExactSplitResult` — frozen, ordered, same shape as `EqualSplitResult`)
+- [x] Participant validation. (reuses `EmptyParticipantsError`, `DuplicateParticipantError`, `InvalidParticipantError` from Phase 2.2)
+- [x] Input immutability. (result and allocations are frozen; input objects are not mutated)
 
 ### Tests
-- [ ] Correct total.
-- [ ] Under-allocation.
-- [ ] Over-allocation.
-- [ ] Duplicate participant.
-- [ ] Invalid participant.
+- [x] Correct total. (100=50+50, 100=60+40, 100=25+25+50, 1=1, zero, JPY, large values)
+- [x] Under-allocation. (short by 1, short by large amount, all-zero vs non-zero total)
+- [x] Over-allocation. (over by 1, over by large amount)
+- [x] Negative allocation. (rejected before sum, even if sum would equal total)
+- [x] Currency mismatch. (INR total + USD allocation → error; all-wrong currency also caught)
+- [x] Duplicate participant. (never silently removed)
+- [x] Invalid participant. (blank, whitespace-only IDs)
+- [x] Determinism. (same inputs → same output)
+- [x] Input immutability. (source objects unchanged after call)
+- [x] Currency preservation on all allocations.
+- [x] Financial invariants. (sum=total, safe integers, no FP, one allocation per participant, error hierarchy)
+
+### Gate
+- [x] Exact split domain operational. (51 exact-split tests, 289 total tests, typecheck PASS, lint PASS)
 
 ## 2.4 Percentage split
 

@@ -75,3 +75,19 @@ export {
   // Operation
   splitEqually,
 } from "./money/split-equal.js";
+
+// Exact Split
+export {
+  // Errors (exact-split-specific)
+  NegativeAllocationError,
+  AllocationCurrencyMismatchError,
+  UnderAllocationError,
+  OverAllocationError,
+
+  // Types
+  type ExactAllocationInput,
+  type ExactSplitResult,
+
+  // Operation
+  splitExactly,
+} from "./money/split-exact.js";
