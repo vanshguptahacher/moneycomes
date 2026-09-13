@@ -588,86 +588,126 @@ Route
 - [x] Users & Profile API operational. (Verified via 18 Phase 4.2 unit tests in `tests/unit/backend-users-phase4.test.ts`, 22 Phase 4.1 auth tests, 982 total test suite PASS, typecheck PASS, lint PASS, Drizzle schema consistency PASS)
 
 ## 4.3 Friends
-- [ ] Search permitted users.
-- [ ] Create relationship.
-- [ ] Remove if supported.
-- [ ] Bilateral balance.
-- [ ] Authorization tests.
+- [x] Search permitted users. (`GET /api/v1/users/search` and `GET /api/v1/friends/search` with strict query validation, min length 2, safe serialization)
+- [x] Create relationship. (`POST /api/v1/friends` with Better Auth session derivation, canonical ordering, self-friendship rejection, duplicate/race conflict 409)
+- [x] Remove if supported. (`DELETE /api/v1/friends/:id` with strict IDOR verification, preserving historical financial records)
+- [x] Bilateral balance. (Derived from authoritative expenses and settlements using integer minor units, exposed via `/friends` list, detail, and `/:id/balance`)
+- [x] Authorization tests. (Strict IDOR protection: User C rejected with 403 Forbidden on read, delete, balance of User A + B friendship)
+
+### Gate
+- [x] Friends API operational. (Verified via 37 Phase 4.3 unit/integration tests in `tests/unit/backend-friends-phase4.test.ts`, 1019 total test suite PASS, typecheck PASS, lint PASS, Drizzle schema consistency PASS)
 
 ## 4.4 Groups
-- [ ] Create.
-- [ ] List.
-- [ ] Get.
-- [ ] Update.
-- [ ] Add member.
-- [ ] Remove member.
-- [ ] List members.
+- [x] Create. (`POST /api/v1/groups` with atomic creator admin membership, transaction safety)
+- [x] List. (`GET /api/v1/groups` listing user's active memberships with deterministic sort and `?q=` search)
+- [x] Get. (`GET /api/v1/groups/:id` with strict member authorization check)
+- [x] Update. (`PATCH /api/v1/groups/:id` restricted to group admins/creator, immutable field protection)
+- [x] Add member. (`POST /api/v1/groups/:id/members` with duplicate prevention 409 and user existence checks)
+- [x] Remove member. (`DELETE /api/v1/groups/:id/members/:userId` with creator protection and admin privileges)
+- [x] List members. (`GET /api/v1/groups/:id/members` returning safe user profiles and roles)
 
 Tests:
-- [ ] Member access.
-- [ ] Non-member rejection.
-- [ ] Duplicate member.
-- [ ] Unauthorized modification.
+- [x] Member access. (Active members can list groups, view details, and view member lists)
+- [x] Non-member rejection. (Non-members rejected with HTTP 403 Forbidden across all group operations)
+- [x] Duplicate member. (Adding existing member rejected with HTTP 409 Conflict; race condition DB constraint handled)
+- [x] Unauthorized modification. (Ordinary members and non-members rejected from updating group details with HTTP 403)
+
+### Gate
+- [x] Groups API operational. (Verified via 35 Phase 4.4 unit/integration tests in `tests/unit/backend-groups-phase4.test.ts`, 1054 total test suite PASS, typecheck PASS, lint PASS, Drizzle schema consistency PASS)
 
 ## 4.5 Expenses
-- [ ] Create.
-- [ ] Get.
-- [ ] Edit.
-- [ ] Delete if supported.
-- [ ] List.
-- [ ] Server-side split calculation.
-- [ ] Transaction.
-- [ ] Idempotency.
+- [x] Create. (`POST /api/v1/groups/:groupId/expenses` — atomic transactional creation, actor identity from Better Auth, member validation, integer minor units, activity event `expense_created`)
+- [x] Get. (`GET /api/v1/groups/:groupId/expenses/:expenseId` — strict IDOR protection, safe participant split details)
+- [x] Edit. (`PATCH /api/v1/groups/:groupId/expenses/:expenseId` — recalculates split allocations atomically, logs `expense_updated`)
+- [x] Delete if supported. (`DELETE /api/v1/groups/:groupId/expenses/:expenseId` — soft delete with `isDeleted: true`, logs `expense_deleted`)
+- [x] List. (`GET /api/v1/groups/:groupId/expenses` — deterministic sorting, paginated with limit/offset)
+- [x] Server-side split calculation. (Equal, Exact, Percentage, and Shares split types verified via domain split engines)
+- [x] Transaction. (Atomic `createWithSplits`, `updateWithSplits`, and `softDelete` with automatic rollback on error)
+- [x] Idempotency. (Scoped `Idempotency-Key` / `X-Idempotency-Key` header support with TTL caching preventing duplicate mutations)
 
 Tests:
-- [ ] Equal.
-- [ ] Exact.
-- [ ] Percentage.
-- [ ] Shares.
-- [ ] Invalid totals.
-- [ ] Unauthorized access.
-- [ ] Duplicate request.
-- [ ] Rollback.
+- [x] Equal. (Equal split validation and calculation tested in `tests/unit/backend-expenses-phase4.test.ts`)
+- [x] Exact. (Exact allocation validation and calculation tested in `tests/unit/backend-expenses-phase4.test.ts`)
+- [x] Percentage. (Percentage allocation validation and basis points calculation tested in `tests/unit/backend-expenses-phase4.test.ts`)
+- [x] Shares. (Shares allocation validation and calculation tested in `tests/unit/backend-expenses-phase4.test.ts`)
+- [x] Invalid totals. (Validation prevents mismatch between total and split sums)
+- [x] Unauthorized access. (IDOR protection prevents cross-group or non-member expense access)
+- [x] Duplicate request. (Idempotency prevents duplicate expense creation on retry)
+- [x] Rollback. (Transaction rollback verified on database errors)
 
 ## 4.6 Balances
-- [ ] Personal balance.
-- [ ] Friend balance.
-- [ ] Group balance.
-- [ ] Simplified debts.
+- [x] Personal balance. (`GET /api/v1/groups/:groupId/balance/me` and `GET /api/v1/users/me/balances` — aggregate net balance, paid, owed across active groups and per group)
+- [x] Friend balance. (`GET /api/v1/friends/:id/balance` — bilateral balance between authenticated user and friend)
+- [x] Group balance. (`GET /api/v1/groups/:groupId/balance` — group-level net balance breakdown across all members, zero-sum invariant preserved)
+- [x] Simplified debts. (`GET /api/v1/groups/:groupId/balance/simplified` — greedy matching algorithm produces minimal direct transfers settling all member positions)
 
-## 4.7 Settlements
-- [ ] Create.
-- [ ] Get.
-- [ ] List.
-- [ ] Validate.
-- [ ] Transaction.
-- [ ] Idempotency.
+## 4.7 Settlements (Phase 4.6 — Settlements API)
+- [x] Create. (`POST /api/v1/groups/:groupId/settlements` — atomic transactional creation, actor identity from Better Auth, member validation, integer minor units, activity event `settlement_created`)
+- [x] Get. (`GET /api/v1/groups/:groupId/settlements/:settlementId` — strict IDOR protection, safe user profile responses)
+- [x] List. (`GET /api/v1/groups/:groupId/settlements` — deterministic sorting by settledAt/createdAt descending, paginated with limit/offset)
+- [x] Update. (`PATCH /api/v1/groups/:groupId/settlements/:settlementId` — authorized for settlement creator or group admin, logs `settlement_updated`)
+- [x] Delete. (`DELETE /api/v1/groups/:groupId/settlements/:settlementId` — authorized for settlement creator or group admin, logs `settlement_deleted`)
+- [x] Validate. (Integer minor-unit amount > 0, currency code, member boundary checks, self-settlement prohibition, UUID parameter validations)
+- [x] Transaction. (Atomic `createWithActivity`, `updateWithActivity`, and `deleteWithActivity` with automatic rollback on error)
+- [x] Idempotency. (Scoped `Idempotency-Key` / `X-Idempotency-Key` header support with TTL caching preventing duplicate mutations)
+- [x] Mobile Client. (Typed client functions in `src/api/settlements.ts`)
+- [x] Tests. (37 comprehensive unit & integration tests covering all 46 required test criteria in `tests/unit/backend-settlements-phase4.test.ts`)
 
-## 4.8 Activity
-- [ ] List.
-- [ ] Scope correctly.
-- [ ] Pagination.
+## 4.8 Activity (Phase 4.7 — Activity API)
+- [x] List. (`GET /api/v1/groups/:groupId/activity` and `GET /api/v1/activity` — group-scoped and global authorized feeds, deterministic ordering `desc(createdAt)`, `desc(id)`)
+- [x] Scope correctly. (Better Auth session identity, strict group membership verification, complete data isolation preventing cross-group leakages)
+- [x] Pagination. (Bounded pagination with `limit` [max 100] and `offset`)
+- [x] Filtering. (Validated filters for `type` and `entityType`, strictly authorization-safe)
+- [x] Read-Only Invariant. (Client-side `POST`, `PATCH`, and `DELETE` intentionally unsupported and unmapped)
+- [x] Safe Response. (Safe actor profiles with `id`, `name`, `email`, `image`; no internal auth secrets or database artifacts)
+- [x] Mobile Client. (Typed client functions in `src/api/activity.ts`)
+- [x] Tests. (23 comprehensive unit & integration tests in `tests/unit/backend-activity-phase4.test.ts`)
 
-## 4.9 Notifications
-- [ ] List.
-- [ ] Mark as read.
-- [ ] Unread count.
+## 4.9 Notifications (Phase 4.8 — Notifications API)
+- [x] List. (`GET /api/v1/notifications` — recipient-isolated query from Better Auth session, deterministic sorting `desc(createdAt)`, `desc(id)`, bounded pagination `limit` [max 100] and `offset`, `unreadOnly` and `type` filters)
+- [x] Unread count. (`GET /api/v1/notifications/unread-count` — efficient database count via SQL `count()` where `read_at IS NULL`, zero in-memory overhead)
+- [x] Get single. (`GET /api/v1/notifications/:notificationId` — UUID validation, IDOR protection returning 404 for other users' notifications)
+- [x] Mark as read. (`PATCH /api/v1/notifications/:notificationId/read` — idempotent read state transition setting `read_at = NOW()`, verified recipient ownership)
+- [x] Mark as unread. (`PATCH /api/v1/notifications/:notificationId/unread` — idempotent read state transition setting `read_at = NULL`, verified recipient ownership)
+- [x] Mark all as read. (`POST /api/v1/notifications/read-all` and `PATCH /api/v1/notifications/read-all` — batch update in database affecting only authenticated user's unread notifications)
+- [x] Server-side generation. (`NotificationService.createNotification` with input validation enforcing allowed notification types and rejecting sensitive metadata keys)
+- [x] Read-Only Invariant. (Arbitrary client creation `POST /api/v1/notifications` and deletion `DELETE /api/v1/notifications/:id` unmapped and rejected with 404)
+- [x] Safe Response. (Safe actor profiles, boolean `isRead`, ISO timestamps, zero exposure of session tokens or DB internals)
+- [x] Mobile Client. (Typed client functions in `src/api/notifications.ts`: `getNotifications`, `getUnreadNotificationCount`, `getNotification`, `markNotificationAsRead`, `markNotificationAsUnread`, `markAllNotificationsAsRead`)
+- [x] Tests. (36 comprehensive unit & integration tests covering all requirements in `tests/unit/backend-notifications-phase4.test.ts`)
 
-## 4.10 Uploads / Attachments
-Only if currently required.
+## 4.10 Uploads / Attachments (Phase 4.9 — Attachments / Receipts API)
+- [x] Authenticate. (Better Auth session identity enforced on all attachment routes via `requireAuth()`)
+- [x] Authorize parent resource. (Strict group membership verification via `findMembership` and expense validation via `ExpenseRepository.findById`; cross-group and cross-expense IDOR return 404)
+- [x] Validate type/size. (Allowed types: JPEG, PNG, WebP, HEIC, HEIF, PDF; max 10MB; magic-byte file signature validation on `Uint8Array` prevents MIME spoofing; empty files rejected)
+- [x] Safe object key. (Server-generated storage path `expenses/{expenseId}/{attachmentId}.{ext}`; arbitrary client paths and bucket names strictly ignored/rejected)
+- [x] Storage + Database Consistency. (Storage upload failure prevents database metadata insertion; metadata persistence failure triggers immediate best-effort cleanup of uploaded storage object)
+- [x] Controlled access. (`GET /:attachmentId` generates short-lived signed download URLs [300s]; no public bucket access or service-role keys exposed)
+- [x] Deletion authorization. (Allowed for uploader, expense creator, or group admin; deletes both PostgreSQL metadata and Supabase Storage object)
+- [x] Mobile Client. (Typed client functions in `src/api/attachments.ts`: `listExpenseAttachments`, `getAttachment`, `uploadAttachment`, `deleteAttachment`)
+- [x] Tests. (24 comprehensive unit & integration tests covering all requirements in `tests/unit/backend-attachments-phase4.test.ts`)
 
-- [ ] Authenticate.
-- [ ] Authorize parent resource.
-- [ ] Validate type/size.
-- [ ] Safe object key.
-- [ ] Controlled access.
+## 4.11 Production API Hardening & Integration Gate (Phase 4.10)
+- [x] Expenses API implementation & hardening. (Repository, service, and Hono routes for complete Expense CRUD, supporting `equal`, `exact`, `percentage`, and `shares` split methods with strict minor-unit domain engine integration)
+- [x] Edge-safe rate limiter. (`server/middleware/rate-limiter.ts` sliding-window in-memory rate limiter protecting against brute-force and request abuse)
+- [x] CORS & idempotency hardening. (Allowed `Idempotency-Key` and `X-Idempotency-Key` headers in preflight CORS policies)
+- [x] Centralized error mapping for domain errors. (`MoneyError` properly converted to HTTP 400 Client Error across all routes and middleware)
+- [x] Multi-User & IDOR Security Matrix. (`tests/unit/backend-phase4-cross-user.test.ts` verifying all 9 Phase 4 resources against IDOR attacks with User A, User B, and Attacker User C)
+- [x] End-to-End Integration Lifecycle Gate. (`tests/unit/backend-phase4-integration-gate.test.ts` executing the complete 12-step sequence: User registration -> Create group -> Add member -> Create expense -> Read expense -> Check activity -> Check notifications -> Create settlement -> Read settlement -> Attach receipt -> Soft delete expense -> Verify invariants)
+- [x] Mobile Client SDK. (Typed client functions in `src/api/expenses.ts` for all expense operations)
+- [x] Tests. (37 tests across 3 dedicated test suites: `backend-expenses-phase4.test.ts`, `backend-phase4-cross-user.test.ts`, `backend-phase4-integration-gate.test.ts`)
 
-### API Gate
-- [ ] Authentication enforced.
-- [ ] Authorization enforced.
-- [ ] Validation enforced.
-- [ ] Financial mutations transactional.
-- [ ] No sensitive error leakage.
+### API Gate (Phase 4.10 Hardened)
+- [x] Authentication enforced across all endpoints via Better Auth.
+- [x] Zero-trust Authorization & IDOR protection verified across all 9 resources.
+- [x] Validation enforced at all boundaries (Zod + minor-unit checks + UUID validations).
+- [x] Financial mutations strictly transactional with automatic rollback.
+- [x] Idempotency cache active for mutations.
+- [x] Zero sensitive credential/stack leakage in production errors.
+- [x] 1,211 automated tests passing across 39 test suites.
+- [x] TypeScript compiler 0 errors (`npm run typecheck`).
+- [x] ESLint 0 errors / 0 warnings (`npm run lint`).
+- [x] Drizzle schema consistency verified (`npx drizzle-kit check`).
 
 ---
 

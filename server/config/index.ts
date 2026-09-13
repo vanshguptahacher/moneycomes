@@ -54,6 +54,14 @@ export const envSchema = z
       .url("BETTER_AUTH_URL must be a valid absolute URL")
       .default("http://localhost:3000"),
     TRUSTED_ORIGINS: z.string().default(DEFAULT_DEV_ORIGINS),
+    SUPABASE_URL: z
+      .string()
+      .url("SUPABASE_URL must be a valid absolute URL")
+      .default("http://localhost:54321"),
+    SUPABASE_SERVICE_ROLE_KEY: z
+      .string()
+      .default("dev_supabase_service_role_key_placeholder"),
+    SUPABASE_STORAGE_BUCKET: z.string().min(1).default("attachments"),
   })
   .superRefine((data, ctx) => {
     // Production-specific strict guardrails

@@ -52,8 +52,17 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions = 
 
   let bodyContent: BodyInit | undefined;
   if (options.body !== undefined) {
-    headers["Content-Type"] = "application/json";
-    bodyContent = JSON.stringify(options.body);
+    if (
+      (typeof FormData !== "undefined" && options.body instanceof FormData) ||
+      (typeof Blob !== "undefined" && options.body instanceof Blob) ||
+      options.body instanceof ArrayBuffer ||
+      ArrayBuffer.isView(options.body)
+    ) {
+      bodyContent = options.body as BodyInit;
+    } else {
+      headers["Content-Type"] = "application/json";
+      bodyContent = JSON.stringify(options.body);
+    }
   }
 
   const response = await fetch(url, {

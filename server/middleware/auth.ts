@@ -19,6 +19,10 @@ declare module "hono" {
  */
 export const requireAuth: () => MiddlewareHandler = () => {
   return async (c, next) => {
+    if (c.get("user") && c.get("session")) {
+      return await next();
+    }
+
     try {
       const sessionResult = await auth.api.getSession({
         headers: c.req.raw.headers,

@@ -12,16 +12,23 @@ import {
   UnauthorizedError,
 } from "../errors/index.js";
 import { sendError } from "../utils/response.js";
+import { MoneyError } from "../../src/domain/index.js";
 
 /**
  * Centralized API error handler.
  * - Guarantees consistent error JSON contracts.
  * - Automatically maps application AppError subclasses to HTTP status codes.
+ * - Automatically maps financial MoneyError domain errors to HTTP 400 Bad Request.
  * - Emits requestId in every error payload.
  * - Logs server errors without exposing stack traces, DB connection strings, or SQL in production.
  */
 export const errorHandler: ErrorHandler = (err, c) => {
   const reqId = c.get("requestId") || "unknown";
+
+  // Handle Financial Domain errors
+  if (err instanceof MoneyError) {
+    return sendError(c, err.code, err.message, 400);
+  }
 
   // Handle Application domain errors (decoupled from HTTP)
   if (err instanceof AppError) {

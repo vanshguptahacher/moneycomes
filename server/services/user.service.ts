@@ -1,4 +1,4 @@
-import { ForbiddenError, NotFoundError } from "../errors/index.js";
+import { ForbiddenError, NotFoundError, ValidationError } from "../errors/index.js";
 import { userRepository, type UserRepository } from "../repositories/index.js";
 import type { User, NewUser } from "../db/schema/index.js";
 
@@ -60,6 +60,32 @@ export class UserService {
     }
 
     return updated;
+  }
+
+  /**
+   * Searches permitted users for friend adding/discovery.
+   * Requires authenticated actor.
+   * Enforces minimum query length (>= 2 chars) to avoid unrestricted directory dumping.
+   * Excludes the searching actor.
+   */
+  async searchUsers(
+    actorId: string,
+    query: string,
+    limit: number = 20
+  ): Promise<User[]> {
+    if (!actorId) {
+      throw new ForbiddenError("Authenticated actor identity is required");
+    }
+
+    const trimmed = query?.trim() ?? "";
+    if (trimmed.length < 2) {
+      throw new ValidationError("Search query must be at least 2 characters long");
+    }
+    if (trimmed.length > 100) {
+      throw new ValidationError("Search query cannot exceed 100 characters");
+    }
+
+    return this.userRepo.searchUsers(trimmed, actorId, limit);
   }
 }
 

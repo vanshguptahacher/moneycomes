@@ -11,6 +11,8 @@ import { healthRoutes } from "./routes/health.js";
 import { apiV1Routes } from "./routes/index.js";
 import { sendError } from "./utils/response.js";
 
+import { rateLimiter } from "./middleware/rate-limiter.js";
+
 export const app = new Hono();
 
 // ============================================================================
@@ -19,7 +21,8 @@ export const app = new Hono();
 // 2. Structured Logger: Capture method, path, timing, status, and requestId
 // 3. Security Headers: Set protective HTTP headers (nosniff, frameguard, etc.)
 // 4. CORS: Cross-origin resource sharing with credentials & allowed origins
-// 5. Body Limit: Mitigate Denial of Service from oversized payloads (1MB max)
+// 5. Rate Limiter: In-memory sliding window for abuse prevention
+// 6. Body Limit: Mitigate Denial of Service from oversized payloads (1MB max)
 // ============================================================================
 
 // 1. Traceable request correlation ID
@@ -37,26 +40,47 @@ app.use(
   cors({
     origin: config.CORS_ORIGIN === "*" ? "*" : config.CORS_ORIGIN.split(",").map((o) => o.trim()),
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "X-Request-Id"],
+    allowHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Request-Id",
+      "Idempotency-Key",
+      "X-Idempotency-Key",
+    ],
     credentials: true,
     maxAge: 86400,
   })
 );
 
-// 5. Request payload size guard (1MB limit)
+// 5. Rate Limiter (sliding window, bypassed in test mode)
 app.use(
-  "*",
-  bodyLimit({
-    maxSize: 1024 * 1024,
-    onError: (c) => {
-      return sendError(
-        c,
-        "PAYLOAD_TOO_LARGE",
-        "Request payload exceeds maximum allowed size of 1MB",
-        413
-      );
-    },
+  "/api/v1/*",
+  rateLimiter({
+    windowMs: 60 * 1000,
+    maxRequests: 300,
+    skip: () => (process.env.NODE_ENV as string) === "test",
   })
+);
+
+// 6. Request payload size guard (1MB general limit, 10MB for attachment uploads)
+app.use(
+
+  "*",
+  async (c, next) => {
+    const isAttachmentUpload = c.req.path.includes("/attachments");
+    const maxSize = isAttachmentUpload ? 10 * 1024 * 1024 : 1024 * 1024;
+    return bodyLimit({
+      maxSize,
+      onError: (ctx) => {
+        return sendError(
+          ctx,
+          "PAYLOAD_TOO_LARGE",
+          `Request payload exceeds maximum allowed size of ${isAttachmentUpload ? "10MB" : "1MB"}`,
+          413
+        );
+      },
+    })(c, next);
+  }
 );
 
 // ============================================================================

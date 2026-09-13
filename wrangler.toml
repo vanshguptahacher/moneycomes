@@ -1,0 +1,76 @@
+# wrangler.toml — Cloudflare Workers Configuration for MoneyComes API
+# ============================================================================
+# PRODUCTION ARCHITECTURE:
+#   Cloudflare Workers → Hono API → Drizzle ORM → Supabase PostgreSQL (via Hyperdrive)
+#                                 → Supabase Storage (via server-side fetch)
+#                                 → Better Auth (backed by Supabase PostgreSQL)
+#
+# DEPLOYMENT:
+#   npx wrangler deploy
+#
+# LOCAL WORKERS SIMULATION:
+#   npx wrangler dev
+#   (For active development, prefer: npm run server:dev — faster iteration)
+# ============================================================================
+
+name = "moneycomes-api"
+main = "worker.ts"
+
+# Cloudflare Workers compatibility date — pin to a known-good date.
+# See: https://developers.cloudflare.com/workers/configuration/compatibility-dates/
+compatibility_date = "2025-09-01"
+
+# nodejs_compat provides Node.js API polyfills (process.env, crypto, etc.)
+# and is REQUIRED for Better Auth and Drizzle to function in the Workers runtime.
+compatibility_flags = ["nodejs_compat"]
+
+# ── Cloudflare Hyperdrive ───────────────────────────────────────────────────
+# Hyperdrive proxies TCP PostgreSQL connections so Workers can reach Supabase.
+#
+# FIRST-TIME SETUP:
+#   1. Get your Supabase Transaction Pooler URL from:
+#        Supabase Dashboard → Project Settings → Database → Connection Pooling
+#        (select "Transaction" mode, port 6543)
+#
+#   2. Create the Hyperdrive proxy:
+#        npx wrangler hyperdrive create moneycomes-db \
+#          --connection-string "postgresql://postgres.[PROJECT_REF]:[DB_PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres"
+#
+#   3. Copy the returned Hyperdrive ID below (replace YOUR_HYPERDRIVE_ID_HERE):
+#
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "YOUR_HYPERDRIVE_ID_HERE"
+
+# ── Non-Secret Environment Variables ───────────────────────────────────────
+[vars]
+NODE_ENV = "production"
+SUPABASE_STORAGE_BUCKET = "attachments"
+# CORS_ORIGIN and TRUSTED_ORIGINS should be set here or as secrets:
+# CORS_ORIGIN = "https://your-production-domain.com"
+# TRUSTED_ORIGINS = "https://your-production-domain.com"
+
+# ── Secrets (NEVER commit actual values — set via Cloudflare dashboard or CLI)
+# ──────────────────────────────────────────────────────────────────────────
+# Run these commands to configure secrets for the production Worker:
+#
+#   npx wrangler secret put BETTER_AUTH_SECRET
+#   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+#   npx wrangler secret put BETTER_AUTH_URL
+#   npx wrangler secret put SUPABASE_URL
+#   npx wrangler secret put DATABASE_URL
+#   npx wrangler secret put CORS_ORIGIN
+#   npx wrangler secret put TRUSTED_ORIGINS
+#
+# Note: DATABASE_URL is kept as a fallback reference secret.
+# Active database connections in the Workers runtime use HYPERDRIVE.connectionString.
+
+# ── Development / Preview Environment ──────────────────────────────────────
+# Override specific settings when running `wrangler dev`
+[env.dev]
+[env.dev.vars]
+NODE_ENV = "development"
+
+# For local wrangler dev, you can use a local or Supabase dev database.
+# Configure a dev Hyperdrive or override via .dev.vars file (gitignored):
+#   DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/moneycomes"

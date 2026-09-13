@@ -162,35 +162,34 @@ unless a later requirement explicitly demands them.
 
 # 3. High-Level Architecture
 
-```text
-                         INTERNET
-                            │
-                            │ HTTPS
-                            ▼
-                  ┌────────────────────┐
-                  │       CADDY        │
-                  │ Reverse Proxy/TLS  │
-                  └─────────┬──────────┘
-                            │
-                            ▼
-                  ┌────────────────────┐
-                  │    HONO API        │
-                  │   TypeScript       │
-                  └─────────┬──────────┘
-                            │
-                     Drizzle ORM
-                            │
-                            ▼
-                  ┌────────────────────┐
-                  │    POSTGRESQL      │
-                  │  Source of Truth   │
-                  └────────────────────┘
+**Current locked production architecture:**
 
-Oracle Cloud VM
-└── Docker
-    ├── Caddy
-    ├── Hono API
-    └── PostgreSQL
+```text
+                            INTERNET
+                               │
+                               │ HTTPS
+                               ▼
+                  ┌─────────────────────────┐
+                  │   Cloudflare Workers     │
+                  │   (global edge runtime)  │
+                  └───────────┬─────────────┘
+                              │
+                  ┌───────────▼─────────────┐
+                  │       Hono API           │
+                  │     TypeScript           │
+                  └───────────┬─────────────┘
+                              │
+                  ┌───────────▼─────────────┐
+                  │      Drizzle ORM         │
+                  └───┬───────────────┬─────┘
+                      │               │
+          ┌───────────▼───┐   ┌───────▼───────────┐
+          │  Supabase     │   │  Supabase Storage  │
+          │  PostgreSQL   │   │  (attachments)     │
+          │  (primary DB) │   └────────────────────┘
+          └───────────────┘
+
+Better Auth → sessions/accounts → Supabase PostgreSQL
 ```
 
 Mobile:
@@ -211,7 +210,8 @@ Mobile:
                HTTPS
                 │
                 ▼
-            Hono API
+        Cloudflare Workers
+        (Hono API endpoint)
 ```
 
 ---
@@ -1002,27 +1002,28 @@ This allows the provider to be changed later.
 
 # 27. Object Storage Architecture
 
-Use Oracle Object Storage for:
+Use **Supabase Storage** for:
 
-- Receipt images
+- Receipt images (expense attachments)
 - Profile images
 - Group images
 - Other user-uploaded files
 
 Do not store large binary files directly inside PostgreSQL.
 
+The backend (Hono API / Cloudflare Workers) is the **only** actor that holds Supabase Storage
+credentials. Mobile clients never receive the service-role key.
+
 Flow:
 
 ```text
 Mobile
- ↓
-Upload API
- ↓
-Validation
- ↓
-Object Storage
- ↓
-File metadata in PostgreSQL
+ ↓ multipart/form-data
+Hono API (Cloudflare Workers)
+ ↓ service-role Bearer token
+Supabase Storage (private bucket)
+ ↓ short-lived signed URL
+File metadata → Supabase PostgreSQL
 ```
 
 Database stores metadata such as:
@@ -1030,9 +1031,9 @@ Database stores metadata such as:
 ```text
 file_id
 owner_id
-object_key
+storage_key (relative object path)
 mime_type
-size
+file_size_bytes
 created_at
 ```
 
@@ -1406,95 +1407,80 @@ PostgreSQL remains private.
 
 ---
 
-# 43. Oracle Cloud Architecture
+# 43. Cloudflare Workers Production Architecture
 
-Target:
+> **Note:** Oracle Cloud, Caddy, and self-hosted PostgreSQL are **not** part of the
+> current production architecture. The locked deployment target is Cloudflare Workers
+> + Supabase. Do not introduce Oracle VM hosting without an explicit architecture decision.
+
+Production deployment target:
 
 ```text
-Oracle Cloud
-    ↓
-Always Free eligible VM
-    ↓
-Ubuntu
-    ↓
-Docker
-    ├── Caddy
-    ├── Hono
-    └── PostgreSQL
+Cloudflare Workers (global edge)
+    ├── Hono API (worker.ts entry point)
+    │
+    ├── Hyperdrive binding
+    │       └──▶ Supabase PostgreSQL (transaction pooler :6543)
+    │
+    ├── Supabase Storage (via server-side fetch, service-role key)
+    │
+    └── Better Auth (backed by Supabase PostgreSQL)
 ```
 
-Use Oracle Object Storage for files/backups.
+Deployment:
 
-Monitor resource consumption.
+```bash
+npx wrangler deploy
+```
 
-Do not assume unlimited CPU, RAM, storage, or bandwidth.
+Secrets are configured via the Cloudflare dashboard or:
+
+```bash
+npx wrangler secret put BETTER_AUTH_SECRET
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+```
 
 ---
 
 # 44. Network Architecture
 
-Conceptually:
+Cloudflare Workers network flow:
 
 ```text
 Internet
    │
-   │ 443
+   │ HTTPS (TLS terminated by Cloudflare)
    ▼
-Caddy
+Cloudflare Workers (global PoPs)
    │
-   │ internal Docker network
-   ▼
-Hono API
+   ├── Hyperdrive → Supabase PostgreSQL :6543 (transaction pooler)
    │
-   │ internal Docker network
-   ▼
-PostgreSQL
+   └── fetch() → Supabase Storage REST API
 ```
 
-Public:
-
-```text
-443 HTTPS
-```
-
-Potentially:
-
-```text
-80 HTTP → redirect to HTTPS
-```
-
-Do not expose:
-
-```text
-5432 PostgreSQL
-```
-
-to the public internet.
+Supabase PostgreSQL is **not** directly reachable from the public internet.
+Mobile clients connect only through the Cloudflare Workers / Hono API layer.
+Service-role credentials never leave the server.
 
 ---
 
 # 45. Backup Architecture
 
+Supabase PostgreSQL provides managed point-in-time recovery (PITR) backups.
+
 Minimum:
 
+- Enable Supabase PITR from the Supabase Dashboard (Project Settings → Backups).
+- Retain at least 7 days of point-in-time recovery.
+- Test restore periodically.
+
+For additional off-site backups:
+
 ```text
-PostgreSQL
-   ↓
-Scheduled backup
-   ↓
-Compressed backup
-   ↓
-Oracle Object Storage
+pg_dump → compressed .sql.gz → cloud storage (e.g., Supabase Storage or external)
 ```
 
-Recommended:
-
-- Daily backups
-- Retention policy
-- Backup verification
-- Periodic restore test
-
-Also maintain infrastructure configuration in Git.
+Maintain all infrastructure configuration (wrangler.toml, schema, migrations) in Git.
 
 ---
 
@@ -1550,19 +1536,16 @@ Never log:
 
 Phase 1:
 
-- Oracle monitoring
-- Docker logs
-- Application health
-- Database health
-- Disk usage
-- CPU/RAM usage
+- Cloudflare Workers Analytics (dashboard: request count, errors, CPU time)
+- Cloudflare Logpush (optional — structured log forwarding)
+- Application health endpoint (`GET /health`, `GET /health/ready`)
+- Supabase Dashboard (database health, query performance, storage usage)
 
 Later:
 
-- Sentry
+- Sentry (error tracking)
 - OpenTelemetry
-- Prometheus
-- Grafana
+- Grafana / external log aggregation
 
 Do not add complex monitoring infrastructure until necessary.
 

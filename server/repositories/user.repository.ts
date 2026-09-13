@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and, or, ilike, ne } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { users, type User, type NewUser } from "../db/schema/index.js";
 import type { DbOrTx } from "./types.js";
@@ -53,6 +53,37 @@ export class UserRepository {
       .returning();
 
     return results[0] ?? null;
+  }
+
+  /**
+   * Search users by matching name or email (case-insensitive substring).
+   * Excludes the searching user (actor).
+   */
+  async searchUsers(
+    query: string,
+    excludeUserId?: string,
+    limit: number = 20,
+    client: DbOrTx = db
+  ): Promise<User[]> {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      return [];
+    }
+    const pattern = `%${trimmed}%`;
+    const searchCondition = or(
+      ilike(users.name, pattern),
+      ilike(users.email, pattern)
+    );
+
+    const condition = excludeUserId
+      ? and(searchCondition, ne(users.id, excludeUserId))
+      : searchCondition;
+
+    return client
+      .select()
+      .from(users)
+      .where(condition)
+      .limit(Math.min(Math.max(1, limit), 50));
   }
 }
 

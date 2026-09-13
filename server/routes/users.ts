@@ -2,8 +2,9 @@ import { Hono } from "hono";
 import { z } from "zod";
 import type { User } from "../db/schema/index.js";
 import { requireAuth, getAuthUser } from "../middleware/auth.js";
-import { validateJson, getValidJson } from "../middleware/validator.js";
+import { validateJson, getValidJson, validateQuery, getValidQuery } from "../middleware/validator.js";
 import { userService } from "../services/user.service.js";
+import { balanceService } from "../services/balance.service.js";
 import { sendSuccess } from "../utils/response.js";
 
 /**
@@ -89,6 +90,16 @@ usersRoutes.get("/me", async (c) => {
 });
 
 /**
+ * GET /api/v1/users/me/balances
+ * Retrieves the current authenticated user's aggregate personal balance across all active groups.
+ */
+usersRoutes.get("/me/balances", async (c) => {
+  const actor = getAuthUser(c);
+  const balances = await balanceService.getUserOverallBalance(actor.id);
+  return sendSuccess(c, balances);
+});
+
+/**
  * PATCH /api/v1/users/me
  * Updates the current authenticated user's profile with validated attributes.
  */
@@ -97,6 +108,34 @@ usersRoutes.patch("/me", validateJson(updateProfileSchema), async (c) => {
   const updates = getValidJson<typeof updateProfileSchema>(c);
   const updated = await userService.updateProfile(actor.id, actor.id, updates);
   return sendSuccess(c, formatSafeUserProfile(updated));
+});
+
+export const searchUsersSchema = z.object({
+  q: z
+    .string({ message: "Search query 'q' must be a string" })
+    .trim()
+    .min(2, "Search query must be at least 2 characters long")
+    .max(100, "Search query cannot exceed 100 characters"),
+  limit: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 20))
+    .refine((val) => !isNaN(val) && val >= 1 && val <= 50, {
+      message: "Limit must be an integer between 1 and 50",
+    }),
+});
+
+export type SearchUsersQuery = z.infer<typeof searchUsersSchema>;
+
+/**
+ * GET /api/v1/users/search
+ * Searches permitted users by name or email with query validation and exclusion of actor.
+ */
+usersRoutes.get("/search", validateQuery(searchUsersSchema), async (c) => {
+  const actor = getAuthUser(c);
+  const { q, limit } = getValidQuery<typeof searchUsersSchema>(c);
+  const matchedUsers = await userService.searchUsers(actor.id, q, limit);
+  return sendSuccess(c, matchedUsers.map(formatSafeUserProfile));
 });
 
 /**
